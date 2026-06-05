@@ -19,13 +19,14 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from stage0_classify import LAYER_METADATA, classify_project_files
+from classify import LAYER_METADATA, classify_project_files
 
 # Import file type helpers
 from plugins.cross_file.constants import (
     get_file_type,
     get_layer_from_path,
     CrossFileEdgeCategory,
+    CROSS_FILE_EDGE_TYPES,
 )
 
 # Import edge quality / pruning utilities
@@ -124,50 +125,6 @@ def _classify_merged_edge(
         "category": "intra_type",
     }
 
-
-# ── Cross-file edge type registry ──────────────────────────────────────────────
-
-CROSS_FILE_EDGE_DESCRIPTIONS: dict[str, str] = {
-    # ── Intra-Type: Same file type ───────────────────────────────────────────
-    "jsp_include":             "JSP include → target JSP",
-    "java_extends":           "Java class extends → parent class",
-    "java_implements":        "Java class implements → interface",
-    "java_import":            "Java import → target class/resource",
-    "ts_import":              "TypeScript import → target module",
-    "js_import":              "JavaScript import → target module",
-    "py_import":              "Python import → target module",
-    "go_import":              "Go import → target package",
-    "cpp_include":            "C++ #include → header file",
-    "c_include":              "C #include → header file",
-
-    # ── Cross-Type: Same layer, different file types ───────────────────────────
-    "jsp_java_render":        "Java Action → JSP (by naming convention)",
-    "jsp_java_form":          "JSP form → Java Form class",
-    "jsp_java_action":        "JSP action route → URL pattern",
-    "react_ts_interface":     "React component → TypeScript interface",
-    "vue_ts_component":       "Vue SFC → TypeScript component",
-
-    # ── Cross-Layer: Different layers ────────────────────────────────────────
-    "renders":                "Action renders → Template file",
-    "form_bound":             "JSP form bound → Java Form class",
-    "template_to_code":        "Template → Source code binding",
-    "webxml_to_servlet":      "web.xml servlet-class → Servlet implementation",
-    "webxml_to_filter":       "web.xml filter-class → Filter implementation",
-    "struts_action_forward":  "struts-config.xml → JSP forward",
-    "struts_form_bean":       "struts-config.xml form-bean → Form class",
-    "tld_tag_handler":        "TLD tag → Tag handler class",
-    "dicon_component":        ".dicon → Component class",
-    "config_to_component":    "Config → DI component",
-    "config_to_route":        "Config → Route/action",
-    "config_to_service":      "Config → Service bean",
-    "config_bean":           "Config → Spring/Seasar bean",
-    "sql_mapping":           "Java field → SQL column mapping (MyBatis @Result)",
-    "jsp_custom_tag":         "JSP custom tag → Tag handler class",
-    "jsp_taglib":            "JSP taglib directive → TLD descriptor",
-    "react_ts_interface":     "React component → TypeScript interface",
-    "js_java_api":           "JavaScript fetch/axios → Java REST endpoint",
-    "js_jsp_render":         "JSP <script src> → JavaScript file",
-}
 
 
 # ── Cross-file edge model ──────────────────────────────────────────────────────
@@ -334,7 +291,7 @@ def make_cross_file_edge(
         "category": category,
         "evidence": evidence,
         "line": line,
-        "edge_type": CROSS_FILE_EDGE_DESCRIPTIONS.get(kind, kind),
+        "edge_type": CROSS_FILE_EDGE_TYPES.get(kind, kind),
     }
 
 
@@ -789,26 +746,22 @@ def generate_cross_file_edges(
                         if sym.get("qualified_name"):
                             all_symbols.append(sym)
     else:
-        def _collect_subgraphs(base: Path) -> None:
-            for child in sorted(base.iterdir()):
-                if not child.is_dir():
-                    continue
-                nodes_file = child / "nodes.jsonl"
-                if nodes_file.exists():
-                    rel = child.relative_to(out_dir)
-                    category = "/".join(rel.parts)
-                    nodes, edges = load_subgraph(child)
-                    if nodes or edges:
-                        subgraphs[category] = (nodes, edges)
-                        ui_data_by_subgraph[category] = load_elements(child)
-                        for node in nodes:
-                            sym = _node_to_symbol(node)
-                            if sym.get("qualified_name"):
-                                all_symbols.append(sym)
-                else:
-                    _collect_subgraphs(child)
-
-        _collect_subgraphs(out_dir)
+        # Flat output structure: each type has its own subdirectory directly under out_dir/
+        # e.g. output/java/nodes.jsonl, output/yaml/nodes.jsonl
+        for child in sorted(out_dir.iterdir()):
+            if not child.is_dir():
+                continue
+            nodes_file = child / "nodes.jsonl"
+            if nodes_file.exists():
+                category = child.name
+                nodes, edges = load_subgraph(child)
+                if nodes or edges:
+                    subgraphs[category] = (nodes, edges)
+                    ui_data_by_subgraph[category] = load_elements(child)
+                    for node in nodes:
+                        sym = _node_to_symbol(node)
+                        if sym.get("qualified_name"):
+                            all_symbols.append(sym)
 
     print(f"  Loaded {len(subgraphs)} subgraphs, {len(all_symbols)} total symbols")
 
@@ -988,7 +941,7 @@ def generate_cross_file_edges_for_type(
     """
     print(f"Stage 6: Cross-File Edge Generation for type: {file_type}")
 
-    from stage0_classify import get_role_for_file_type
+    from classify import get_role_for_file_type
 
     target_role = get_role_for_file_type(file_type)
     if target_role is None:
@@ -998,30 +951,26 @@ def generate_cross_file_edges_for_type(
     layer, subcat = target_role
     category = f"{layer}/{subcat}"
 
-    # Load the target subgraph
-    target_dir = out_dir / layer / subcat
+    # Load the target subgraph (flat: output/{type}/)
+    target_dir = out_dir / file_type
     target_nodes, target_edges = load_subgraph(target_dir)
 
-    # Find related subgraphs (same layer or cross-referencing)
+    # Find related subgraphs in the flat output directory
     subgraphs: dict[str, tuple[list[dict], list[dict]]] = {category: (target_nodes, target_edges)}
     ui_data_by_subgraph: dict[str, dict] = {category: _reconstruct_elements(target_nodes)}
     all_symbols: list[dict] = [_node_to_symbol(n) for n in target_nodes if _node_to_symbol(n).get("qualified_name")]
 
-    # Scan for related subgraphs in adjacent layers
-    for other_dir in sorted(out_dir.iterdir()):
-        if not other_dir.is_dir():
+    # Scan for related subgraphs (all type directories in flat output)
+    for subdir in sorted(out_dir.iterdir()):
+        if not subdir.is_dir() or subdir.name == file_type:
             continue
-        if other_dir.name != layer:
-            # Check cross-layer relationships
-            for subcat_dir in sorted(other_dir.iterdir()):
-                if subcat_dir.is_dir():
-                    related_category = f"{other_dir.name}/{subcat_dir.name}"
-                    # Load related subgraph for cross-edge detection
-                    nodes, edges = load_subgraph(subcat_dir)
-                    if nodes:
-                        subgraphs[related_category] = (nodes, edges)
-                        ui_data_by_subgraph[related_category] = load_elements(subcat_dir)
-                        all_symbols.extend(_node_to_symbol(n) for n in nodes if _node_to_symbol(n).get("qualified_name"))
+        # Load related subgraph for cross-edge detection
+        nodes, edges = load_subgraph(subdir)
+        if nodes:
+            related_category = subdir.name
+            subgraphs[related_category] = (nodes, edges)
+            ui_data_by_subgraph[related_category] = load_elements(subdir)
+            all_symbols.extend(_node_to_symbol(n) for n in nodes if _node_to_symbol(n).get("qualified_name"))
 
     print(f"  Loaded {len(subgraphs)} related subgraphs for {file_type}")
 
@@ -1069,7 +1018,7 @@ def generate_cross_file_edges_for_type(
         },
     }
 
-    cross_edges_file = out_dir / layer / subcat / "cross_file_edges.json"
+    cross_edges_file = out_dir / file_type / "cross_file_edges.json"
     cross_edges_file.parent.mkdir(parents=True, exist_ok=True)
     cross_edges_file.write_text(
         json.dumps(target_cross_edges, ensure_ascii=False, indent=2), encoding="utf-8")

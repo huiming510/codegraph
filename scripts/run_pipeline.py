@@ -8,6 +8,7 @@ import os
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
+from abc import ABC, abstractmethod
 from typing import Optional, Literal
 from pathlib import Path
 from tqdm import tqdm
@@ -26,7 +27,7 @@ from stage2_symbols import build_symbol_table
 from stage3_types import infer_types
 from stage4_refs import resolve_references
 from stage5_semantic import semantic_enrichment
-from stage0_classify import (
+from classify import (
     classify_project_files,
     classify_file,
     build_output_structure,
@@ -36,10 +37,9 @@ from stage0_classify import (
     LAYER_METADATA,
     FILE_TYPE_CODE_MAP,
 )
-from stage6_cross_file import (
+from cross_file import (
     generate_cross_file_edges,
     generate_cross_file_edges_for_type,
-    CROSS_FILE_EDGE_DESCRIPTIONS,
 )
 from _build_viewer import main as _build_viewer
 from edge_quality import (
@@ -160,18 +160,78 @@ class SubgraphStats:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  FileTypeHandler Protocol — one implementation per file-type category
+#  BaseHandler — unified interface for all file type handlers
 # ══════════════════════════════════════════════════════════════════════════════
 
-class SourceCodeHandler:
+class BaseHandler(ABC):
+    """Handler 基类，定义统一接口。"""
+
+    def __init__(self, lang: str):
+        self.lang = lang
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        ...
+
+    @abstractmethod
+    def parse(self, src_root: Path, files: list[Path]) -> list["ParseEntry"]:
+        ...
+
+    @abstractmethod
+    def build_subgraph(self, src_root: Path, entries: list["ParseEntry"],
+                      full_graph: bool = False) -> tuple[list[dict], list[dict], SubgraphStats]:
+        ...
+
+    def write_jsonl(
+        self,
+        symbols: list[dict],
+        edges: list[dict],
+        entries: list["ParseEntry"],
+        out_dir: Path,
+        full_graph: bool = False,
+        type_suffix: str = "",
+    ) -> None:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        nodes_path = out_dir / "nodes.jsonl"
+        edges_path = out_dir / "edges.jsonl"
+
+        with nodes_path.open("w", encoding="utf-8") as f:
+            for sym in symbols:
+                node = {
+                    "id": sym.get("qualified_name", ""),
+                    "label": sym.get("name", ""),
+                    "kind": sym.get("kind", "unknown"),
+                    "file": sym.get("file", ""),
+                    "start": sym.get("start"),
+                    "end": sym.get("end"),
+                }
+                for k in ("tag_name", "attrs", "scope", "type_hint", "modifiers",
+                          "annotations", "docstring", "domain_tags", "control_flow",
+                          "url_pattern", "tag_usage", "custom_tags", "handler",
+                          "body_content", "is_entry"):
+                    if k in sym and sym[k] not in (None, []):
+                        node[k] = sym[k]
+                if "line" in sym:
+                    node["start"] = [sym["line"], 0]
+                    node["end"] = [sym["line"], 0]
+                f.write(json.dumps(node, ensure_ascii=False) + "\n")
+
+        with edges_path.open("w", encoding="utf-8") as f:
+            for edge in edges:
+                f.write(json.dumps(edge, ensure_ascii=False) + "\n")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  FileTypeHandler — one implementation per file-type category
+# ══════════════════════════════════════════════════════════════════════════════
+
+class SourceCodeHandler(BaseHandler):
     """Handler for source code files (java, python, javascript, go, cpp).
 
     Pipeline: parse_directory → build_symbol_table → infer_types
              → resolve_references → semantic_enrichment → subgraph
     """
-
-    def __init__(self, lang: str):
-        self.lang = lang
 
     @property
     def name(self) -> str:
@@ -183,44 +243,43 @@ class SourceCodeHandler:
         return [ParseEntry.from_ast(e) for e in ast_data]
 
     def build_subgraph(self, src_root: Path, entries: list[ParseEntry],
-                      full_graph: bool = False) -> tuple[dict, SubgraphStats]:
-        """Run the full source-code pipeline and return (enriched graph dict, stats)."""
+                      full_graph: bool = False) -> tuple[list[dict], list[dict], SubgraphStats]:
+        """Run the full source-code pipeline and return (symbols, edges, stats)."""
         ast_data = [
             {"file": e.file, "ast": e.metadata.get("ast"), "parse_error": e.parse_error}
             for e in entries
         ]
 
-        # Stage 2: build symbols (progress bar inside stage2_symbols.py)
         sym_data = build_symbol_table(ast_data, self.lang, str(src_root))
-        # Stage 3: infer types (in-memory, fast)
         typed_data = infer_types(sym_data)
-        # Stage 4: resolve references
         refs_data = resolve_references(typed_data, ast_data, None, self.lang,
                                       filter_quality=not full_graph)
-        # Stage 5: semantic enrichment
         graph = semantic_enrichment(refs_data, None, self.lang,
                                     skip_prune=full_graph)
 
-        return graph, SubgraphStats(
+        symbols = graph.get("symbols", [])
+        edges = graph.get("edges", [])
+        return symbols, edges, SubgraphStats(
             file_count=len(entries),
             parse_failed=sum(1 for e in entries if e.parse_error),
-            nodes=len(graph.get("symbols", [])),
-            edges=len(graph.get("edges", [])),
+            nodes=len(symbols),
+            edges=len(edges),
             elements=0,
         )
 
-    def write_jsonl(self, graph: dict, ast_data: list[dict], ui_data: dict,
-                   out_dir: Path, full_graph: bool = False):
-        _write_jsonl_from_graph(graph=graph, ast_data=ast_data, ui_data=ui_data,
-                              out_dir=out_dir, full_graph=full_graph)
-        _write_method_bodies(graph, ast_data, out_dir)
+    def write_jsonl(self, graph=None, ast_data=None, ui_data=None,
+                   symbols=None, edges=None, entries=None,
+                   out_dir=None, full_graph=False, type_suffix="", **kwargs):
+        if graph is not None and ast_data is not None:
+            _write_jsonl_from_graph(graph=graph, ast_data=ast_data, ui_data=ui_data or {},
+                                  out_dir=out_dir, full_graph=full_graph)
+            _write_method_bodies(graph, ast_data, out_dir)
+        elif symbols is not None and edges is not None:
+            BaseHandler.write_jsonl(self, symbols, edges, entries or [], out_dir, full_graph, type_suffix)
 
 
-class TemplateHandler:
+class TemplateHandler(BaseHandler):
     """Handler for template files (jsp, jinja2, react, vue, go_template)."""
-
-    def __init__(self, lang: str):
-        self.lang = lang  # the template plugin name
 
     @property
     def name(self) -> str:
@@ -291,37 +350,14 @@ class TemplateHandler:
             elements=sum(len(e.elements) for e in entries),
         )
 
-    def write_jsonl(self, symbols: list[dict], edges: list[dict],
-                   entries: list[ParseEntry], out_dir: Path, full_graph: bool = False):
-        nodes_path = out_dir / "nodes.jsonl"
-        edges_path = out_dir / "edges.jsonl"
-
-        with nodes_path.open("w", encoding="utf-8") as f:
-            for sym in symbols:
-                node = {
-                    "id": sym["qualified_name"],
-                    "label": sym.get("name", ""),
-                    "kind": sym.get("kind", "template"),
-                    "file": sym.get("file", ""),
-                    "start": [sym.get("line", 1), 0] if sym.get("line") else None,
-                    "end": [sym.get("line", 1), 0] if sym.get("line") else None,
-                    "lang": sym.get("lang", ""),
-                }
-                for k in ("tag_name", "attrs"):
-                    if k in sym:
-                        node[k] = sym[k]
-                f.write(json.dumps(node, ensure_ascii=False) + "\n")
-
-        with edges_path.open("w", encoding="utf-8") as f:
-            for edge in edges:
-                f.write(json.dumps(edge, ensure_ascii=False) + "\n")
+    def write_jsonl(self, symbols=None, edges=None, entries=None,
+                   out_dir=None, full_graph=False, type_suffix="", **kwargs):
+        BaseHandler.write_jsonl(self, symbols or [], edges or [], entries or [],
+                              out_dir, full_graph, type_suffix)
 
 
-class ConfigHandler:
+class ConfigHandler(BaseHandler):
     """Handler for config files (yaml, json, properties, env, etc.)."""
-
-    def __init__(self, lang: str):
-        self.lang = lang  # the config plugin name
 
     @property
     def name(self) -> str:
@@ -398,36 +434,14 @@ class ConfigHandler:
             elements=sum(len(e.elements) for e in entries),
         )
 
-    def write_jsonl(self, symbols: list[dict], edges: list[dict],
-                   entries: list[ParseEntry], out_dir: Path, full_graph: bool = False):
-        nodes_path = out_dir / "nodes.jsonl"
-        edges_path = out_dir / "edges.jsonl"
-
-        with nodes_path.open("w", encoding="utf-8") as f:
-            for sym in symbols:
-                node = {
-                    "id": sym["qualified_name"],
-                    "label": sym.get("name", ""),
-                    "kind": sym.get("kind", "config"),
-                    "file": sym.get("file", ""),
-                    "start": [sym.get("line", 1), 0] if sym.get("line") else None,
-                    "end": [sym.get("line", 1), 0] if sym.get("line") else None,
-                    "lang": sym.get("lang", ""),
-                }
-                if "attrs" in sym:
-                    node["attrs"] = sym["attrs"]
-                f.write(json.dumps(node, ensure_ascii=False) + "\n")
-
-        with edges_path.open("w", encoding="utf-8") as f:
-            for edge in edges:
-                f.write(json.dumps(edge, ensure_ascii=False) + "\n")
+    def write_jsonl(self, symbols=None, edges=None, entries=None,
+                   out_dir=None, full_graph=False, type_suffix="", **kwargs):
+        BaseHandler.write_jsonl(self, symbols or [], edges or [], entries or [],
+                              out_dir, full_graph, type_suffix)
 
 
-class BuildHandler:
+class BuildHandler(BaseHandler):
     """Handler for build system files (maven, gradle, npm, pip, go_mod)."""
-
-    def __init__(self, lang: str):
-        self.lang = lang
 
     @property
     def name(self) -> str:
@@ -506,49 +520,14 @@ class BuildHandler:
             elements=sum(len(e.elements) for e in entries),
         )
 
-    def write_jsonl(self, symbols: list[dict], edges: list[dict],
-                   entries: list[ParseEntry], out_dir: Path, full_graph: bool = False):
-        nodes_path = out_dir / "nodes.jsonl"
-        edges_path = out_dir / "edges.jsonl"
-
-        with nodes_path.open("w", encoding="utf-8") as f:
-            for sym in symbols:
-                node = {
-                    "id": sym["qualified_name"],
-                    "label": sym.get("name", ""),
-                    "kind": sym.get("kind", "build"),
-                    "file": sym.get("file", ""),
-                    "start": [sym.get("line", 1), 0] if sym.get("line") else None,
-                    "end": [sym.get("line", 1), 0] if sym.get("line") else None,
-                    "lang": sym.get("lang", ""),
-                }
-                if "attrs" in sym:
-                    node["attrs"] = sym["attrs"]
-                f.write(json.dumps(node, ensure_ascii=False) + "\n")
-
-        with edges_path.open("w", encoding="utf-8") as f:
-            for edge in edges:
-                f.write(json.dumps(edge, ensure_ascii=False) + "\n")
-
-        ui_data = {}
-        for entry in entries:
-            if self.lang not in ui_data:
-                ui_data[self.lang] = []
-            ui_data[self.lang].append({
-                "file": entry.file,
-                "elements": entry.elements,
-                "parse_error": entry.parse_error,
-                "error_msg": entry.error_msg,
-            })
+    def write_jsonl(self, symbols=None, edges=None, entries=None,
+                   out_dir=None, full_graph=False, type_suffix="", **kwargs):
+        BaseHandler.write_jsonl(self, symbols or [], edges or [], entries or [],
+                              out_dir, full_graph, type_suffix)
 
 
-
-
-class FrameworkHandler:
+class FrameworkHandler(BaseHandler):
     """Handler for Java framework config files (tld, struts_config, web_xml, dicon)."""
-
-    def __init__(self, lang: str):
-        self.lang = lang
 
     @property
     def name(self) -> str:
@@ -624,40 +603,10 @@ class FrameworkHandler:
             elements=sum(len(e.elements) for e in entries),
         )
 
-    def write_jsonl(self, symbols: list[dict], edges: list[dict],
-                   entries: list[ParseEntry], out_dir: Path, full_graph: bool = False):
-        nodes_path = out_dir / "nodes.jsonl"
-        edges_path = out_dir / "edges.jsonl"
-
-        with nodes_path.open("w", encoding="utf-8") as f:
-            for sym in symbols:
-                node = {
-                    "id": sym["qualified_name"],
-                    "label": sym.get("name", ""),
-                    "kind": sym.get("kind", "config"),
-                    "file": sym.get("file", ""),
-                    "start": [sym.get("line", 1), 0] if sym.get("line") else None,
-                    "end": [sym.get("line", 1), 0] if sym.get("line") else None,
-                    "lang": sym.get("lang", ""),
-                }
-                if "attrs" in sym:
-                    node["attrs"] = sym["attrs"]
-                f.write(json.dumps(node, ensure_ascii=False) + "\n")
-
-        with edges_path.open("w", encoding="utf-8") as f:
-            for edge in edges:
-                f.write(json.dumps(edge, ensure_ascii=False) + "\n")
-
-        ui_data = {}
-        for entry in entries:
-            if self.lang not in ui_data:
-                ui_data[self.lang] = []
-            ui_data[self.lang].append({
-                "file": entry.file,
-                "elements": entry.elements,
-                "parse_error": entry.parse_error,
-                "error_msg": entry.error_msg,
-            })
+    def write_jsonl(self, symbols=None, edges=None, entries=None,
+                   out_dir=None, full_graph=False, type_suffix="", **kwargs):
+        BaseHandler.write_jsonl(self, symbols or [], edges or [], entries or [],
+                              out_dir, full_graph, type_suffix)
 
 
 
@@ -666,7 +615,7 @@ class FrameworkHandler:
 
 _SOURCE_LANGS = {"java", "python", "javascript", "go", "cpp"}
 _TEMPLATE_LANGS = {"jsp", "jinja2", "react", "vue", "html_template"}
-_FRAMEWORK_LANGS = {"tld", "struts_config", "web_xml", "dicon"}
+_FRAMEWORK_LANGS = {"tld", "struts_config", "web_xml", "dicon", "mybatis_xml_orm"}
 _CONFIG_LANGS = {"yaml", "json", "properties", "env"}
 
 
@@ -730,15 +679,15 @@ def run_for_type(src_root: Path, out_dir: Path, type_name: str,
             {"file": e.file, "ast": e.metadata.get("ast"), "parse_error": e.parse_error}
             for e in entries
         ]
-        graph, stats = handler.build_subgraph(src_root, entries, full_graph=do_full_graph)
+        symbols, edges, stats = handler.build_subgraph(src_root, entries, full_graph=do_full_graph)
+        graph = {"symbols": symbols, "edges": edges}
         print(f"  [Stage 2]   {stats.nodes} nodes, {stats.edges} edges")
-        _print_intra_type_summary(graph.get("edges", []))
+        _print_intra_type_summary(edges)
 
         # Stage 3: Write JSONL
         print(f"  [Stage 3] Writing subgraph...")
-        # For source code, ui_data is not needed for template edge resolution
-        handler.write_jsonl(graph=graph, ast_data=ast_data, ui_data={},
-                          out_dir=out_dir, full_graph=do_full_graph)
+        handler.write_jsonl(symbols=symbols, edges=edges, entries=entries,
+                         out_dir=out_dir, full_graph=do_full_graph)
     else:
         symbols, edges, stats = handler.build_subgraph(src_root, entries, full_graph=do_full_graph)
         print(f"  [Stage 2]   {stats.nodes} nodes, {stats.edges} edges")
@@ -878,14 +827,12 @@ def run_all(src_root: Path, out_dir: Path,
             full_graph: bool = False) -> dict:
     """New --all mode: classify files → unified subgraph pipeline → cross-file edges.
 
-    Output structure:
+    Output structure (flat):
         output/
-        ├── 01_source/backend/
-        │   └── nodes.jsonl, edges.jsonl   (all source types merged)
-        ├── 02_template/web_pages/
-        │   └── nodes.jsonl, edges.jsonl  (all template types merged)
-        ├── 03_config/app_config/
-        ├── 03_config/framework/java/
+        ├── java/nodes.jsonl, edges.jsonl
+        ├── python/nodes.jsonl, edges.jsonl
+        ├── vue/nodes.jsonl, edges.jsonl
+        ├── yaml/nodes.jsonl, edges.jsonl
         ├── cross_file_edges.json
         └── all_graph.json
 
@@ -901,48 +848,41 @@ def run_all(src_root: Path, out_dir: Path,
     print(f"Stage 0: Project File Classification")
     print(f"{'='*60}")
 
-    # Stage 0: classify all project files into role architecture categories
+    # Stage 0: classify all project files
     classification = classify_project_files(src_root)
     print_classification_summary(classification)
 
-    # Build output structure (creates all directories, even empty ones)
+    # Build output structure (creates root directory)
     build_output_structure(out_dir)
 
-    # ── Phase 1: Build subgraphs per (category, handler) ─────────────────────
+    # Collect all files into a flat pool
+    all_files: list[Path] = []
+    for files in classification.values():
+        all_files.extend(files)
+
+    if not all_files:
+        print("No files found.")
+        return {}
+
+    # Group files by handler (flat — no layer/subcat hierarchy)
+    type_groups = _group_files_by_handler(all_files)
+    if not type_groups:
+        print("  No supported file types found.")
+        return {}
+
+    print(f"  Detected {len(type_groups)} type(s): {', '.join(sorted(type_groups.keys()))}")
+
+    # ── Phase 1: Build subgraphs per type (flat output) ─────────────────────────
     all_subgraph_dirs: list[Path] = []
 
-    for category in sorted(classification.keys()):
-        files = classification[category]
-        if not files:
-            continue
+    for type_name in sorted(type_groups.keys()):
+        type_out = out_dir / type_name
+        type_out.mkdir(parents=True, exist_ok=True)
+        all_subgraph_dirs.append(type_out)
 
-        layer, subcat = category.split("/", 1)
-        category_out = out_dir / layer / subcat
-        category_out.mkdir(parents=True, exist_ok=True)
-
-        print(f"\n{'='*60}")
-        print(f"Processing category: {layer}/{subcat}")
-        print(f"  Total files: {len(files)}")
-        print(f"{'='*60}")
-
-        # Group files by which handler can process them
-        type_groups = _group_files_by_handler(files)
-        if not type_groups:
-            skipped = [str(fp).replace(str(src_root), "").lstrip(os.sep) for fp in files]
-            print(f"  No supported file types ({len(files)} skipped): {', '.join(skipped)}")
-            continue
-
-        type_list = ", ".join(sorted(type_groups.keys()))
-        print(f"  Detected {len(type_groups)} type(s): {type_list}")
-
-        for type_name in sorted(type_groups.keys()):
-            type_out = category_out / type_name
-            type_out.mkdir(parents=True, exist_ok=True)
-            all_subgraph_dirs.append(type_out)
-
-            print(f"\n--- Parsing {type_name.upper()} files ({len(type_groups[type_name])} files) ---")
-            run_for_type(src_root, type_out, type_name,
-                        type_groups[type_name], do_full_graph=full_graph)
+        print(f"\n--- Parsing {type_name.upper()} files ({len(type_groups[type_name])} files) ---")
+        run_for_type(src_root, type_out, type_name,
+                    type_groups[type_name], do_full_graph=full_graph)
 
     # ── Phase 2: Merge all subgraphs ──────────────────────────────────────────
     print(f"\n{'='*60}")
@@ -1139,7 +1079,7 @@ def run_singlefile(src_root: Path, out_dir: Path,
     Returns:
         Subgraph dict with nodes, edges, and related cross-file edges
     """
-    from stage0_classify import get_role_for_file_type
+    from classify import get_role_for_file_type, classify_project_files
 
     role = get_role_for_file_type(file_type)
     if role is None:
@@ -1148,7 +1088,6 @@ def run_singlefile(src_root: Path, out_dir: Path,
         return {}
 
     layer, subcat = role
-    category = f"{layer}/{subcat}"
 
     print(f"\n{'='*60}")
     print(f"Stage 0: File Type '{file_type}' -> {layer}/{subcat}")
@@ -1156,13 +1095,10 @@ def run_singlefile(src_root: Path, out_dir: Path,
 
     # Build output structure
     build_output_structure(out_dir)
-    category_out = out_dir / layer / subcat
-    category_out.mkdir(parents=True, exist_ok=True)
 
     # Group files for this type using the unified handler
-    from stage0_classify import classify_project_files
     classification = classify_project_files(src_root)
-    files = classification.get(category, [])
+    files = classification.get(f"{layer}/{subcat}", [])
 
     if not files:
         print(f"No files found for type: {file_type}")
@@ -1178,8 +1114,8 @@ def run_singlefile(src_root: Path, out_dir: Path,
 
     print(f"Found {len(type_files)} files for type: {file_type}")
 
-    # Run unified pipeline
-    type_out = category_out / file_type
+    # Run unified pipeline (flat: output goes to output/{type}/)
+    type_out = out_dir / file_type
     type_out.mkdir(parents=True, exist_ok=True)
     run_for_type(src_root, type_out, file_type, type_files, do_full_graph=full_graph)
 
@@ -1677,73 +1613,46 @@ if __name__ == "__main__":
     import argparse
 
     parser_arg = argparse.ArgumentParser(
-        description="Run the CodeGraph pipeline",
+        description="CodeGraph: 代码库结构化分析工具",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            "Modes:\n"
-            "  --all          Classify all files by role architecture, parse each category,\n"
-            "                  then generate cross-file edges into a master graph.\n"
-            "  --singlefile   Parse only the specified file type, output its subgraph\n"
-            "                  plus related cross-file edges (not the complete master graph).\n"
-            "  --lang          Parse only the specified language (legacy mode).\n\n"
-            "File type codes for --singlefile:\n"
-            "  java, python, javascript, typescript, go, cpp\n"
-            "  jsp, html, xml, yaml, json, properties, toml, gradle\n\n"
-            "Examples:\n"
-            "  python run_pipeline.py ./src ./output --all\n"
-            "  python run_pipeline.py ./src ./output --singlefile java\n"
-            "  python run_pipeline.py ./src ./output --lang python\n"
-        ),
+        epilog="""
+示例:
+  python run_pipeline.py --all
+  python run_pipeline.py --all ./my-project ./output
+  python run_pipeline.py --singlefile --type java
+        """,
     )
-    parser_arg.add_argument("src_root", nargs="?", type=Path, default=None,
-                            help="Source code directory to analyze")
-    parser_arg.add_argument("out_dir", nargs="?", type=Path, default=None,
-                            help="Output directory for graph files")
-    parser_arg.add_argument("--lang", choices=["java", "python", "javascript", "go", "cpp"],
-                            default=None, help="Language plugin to use (legacy single-language mode)")
     parser_arg.add_argument("--all", action="store_true",
-                            help="Role-architecture mode: parse all languages + generate cross-file edges")
-    parser_arg.add_argument("--singlefile", type=str, default=None,
-                            help="Parse only the specified file type (e.g., java, jsp, yaml)")
+        help="全量分析：解析所有支持的文件类型，生成子图 + 跨文件边")
+    parser_arg.add_argument("--singlefile", action="store_true",
+        help="单类型分析：按文件类型解析，输出其子图及相关的跨文件边")
+    parser_arg.add_argument("--type",
+        help="指定文件类型（仅 --singlefile 时使用），如 java / python / vue / yaml")
     parser_arg.add_argument("--auto", action="store_true",
-                            help="Auto-discover src and out directories")
-    parser_arg.add_argument("--mode",
-                            choices=["filtered", "full"], default="filtered",
-                            help="Output mode: 'filtered' (default, CORE layer only, "
-                                 "compact code graph) or 'full' (all layers, "
-                                 "UI + config + build + template edges)")
+        help="自动发现 src/ 和 out/ 目录")
+    parser_arg.add_argument("--mode", choices=["filtered", "full"], default="filtered",
+        help="图输出模式：filtered（默认，仅关键节点）/ full（完整图）")
+    parser_arg.add_argument("src_dir", nargs="?", default=".",
+        help="源代码目录（默认：当前目录）")
+    parser_arg.add_argument("out_dir", nargs="?", default="./output",
+        help="输出目录（默认：./output）")
 
     args = parser_arg.parse_args()
     full_graph = (args.mode == "full")
 
-    # Auto-discovery mode
-    if args.auto or (args.src_root is None and args.out_dir is None):
+    src = Path(args.src_dir)
+    out = Path(args.out_dir)
+
+    if args.auto:
         src = Path("src/main/java") if Path("src/main/java").exists() else Path("src")
         if not src.exists():
             src = Path(".")
         out = Path("output")
         print(f"  [auto mode: src={src}, out={out}]")
-    else:
-        src = args.src_root or Path(".")
-        out = args.out_dir or Path("output")
 
-    if args.all:
-        # New --all mode: role architecture based
-        # --all means comprehensive analysis: parse all types, generate all edges,
-        # no pruning. Always use full_graph=True.
-        run_all(src, out, full_graph=True)
-    elif args.singlefile:
-        # New --singlefile mode
-        run_singlefile(src, out, args.singlefile, full_graph=full_graph)
-    elif args.lang:
-        # Legacy single-language mode
-        run(src, out, args.lang, full_graph=full_graph)
+    if args.singlefile:
+        if not args.type:
+            parser_arg.error("--singlefile 必须配合 --type 使用")
+        run_singlefile(src, out, args.type, full_graph=full_graph)
     else:
-        # Auto-detect single language
-        from plugins.src_01_source.backend import LanguageRegistry
-        plugins = LanguageRegistry.get_by_glob_patterns(src)
-        if plugins:
-            run(src, out, plugins[0].lang_id, full_graph=full_graph)
-        else:
-            print("No supported language files found. Defaulting to Java.")
-            run(src, out, "java", full_graph=full_graph)
+        run_all(src, out, full_graph=full_graph)

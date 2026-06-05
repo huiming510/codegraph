@@ -297,51 +297,19 @@ def get_role_for_file_type(type_code: str) -> Optional[tuple[str, str]]:
 
 
 def build_output_structure(out_dir: Path) -> dict[str, Path]:
-    """Build the full role architecture output directory structure.
+    """Build the output directory structure (flat, type-based).
 
-    Creates all directories in the role architecture even if they are empty,
-    so the output faithfully mirrors the architecture.
+    Creates the root output directory. Subdirectories (one per file type)
+    are created dynamically by each handler's write_jsonl.
 
     Args:
         out_dir: Root output directory
 
     Returns:
-        Dictionary mapping category string to Path for all subdirectories
+        Dictionary mapping type name to Path (empty dict — kept for API compat)
     """
-    structure: dict[str, Path] = {}
-
-    # Build all layer/subcategory combinations
-    all_categories = [
-        ("01_source", "backend"),
-        ("01_source", "frontend"),
-        ("01_source", "mobile"),
-        ("01_source", "embedded"),
-        ("01_source", "orm"),
-        ("02_template", "web_pages"),
-        ("02_template", "email_tpl"),
-        ("02_template", "pdf_tpl"),
-        ("03_config", "framework/java"),
-        ("03_config", "framework/python"),
-        ("03_config", "app_config"),
-        ("05_script", "deploy"),
-        ("05_script", "db"),
-        ("05_script", "tool"),
-        ("06_resource", "i18n"),
-        ("06_resource", "image"),
-        ("06_resource", "font"),
-        ("06_resource", "static"),
-        ("07_doc", "api_doc"),
-        ("07_doc", "internal"),
-        ("07_doc", "spec"),
-    ]
-
-    for layer, subcat in all_categories:
-        cat_dir = out_dir / layer / subcat
-        cat_dir.mkdir(parents=True, exist_ok=True)
-        category = f"{layer}/{subcat}"
-        structure[category] = cat_dir
-
-    return structure
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    return {}
 
 
 def classify_to_output_dir(file_path: Path, out_dir: Path) -> Path:
