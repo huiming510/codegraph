@@ -1,0 +1,68 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+dist/
+wheels/
+*.egg-info
+*.egg
+
+# Virtual environments
+.venv
+.venv-mineru/
+venv/
+mineru_install_log.txt
+
+# Node
+node_modules/
+package-lock.json
+tempFiles/
+cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 后端临时与本地数�?
+uploads/
+src/backend/tempFiles/*
+!src/backend/tempFiles/.gitkeep
+backend/tempFiles/*
+!backend/tempFiles/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+
+# 格式转换 / 预处理缓�?
+src/preprocess/cache/
+
+# 日志与系�?
+*.log
+*.log.gz
+.DS_Store
+Thumbs.db
+
+# 代码检查报告（本地运行生成�?
+reports/
+
+# 发布产物（本地打包上传服务器用）
+release/
+src/backend/frontend_dist/
+
+# Playwright E2E 截图与结果（src/frontend 下运行生成）
+test-results/
+playwright-report/
+playwright/.cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+/examples/
+
+# Cursor skills reference files
+.cursor/skills/*/reference.md
+
+# SonarQube local config
+sonar-project.properties

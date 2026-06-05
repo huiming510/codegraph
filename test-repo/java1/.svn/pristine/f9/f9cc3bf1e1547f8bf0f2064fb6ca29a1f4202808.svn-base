@@ -1,0 +1,12 @@
+######################################################################
+# ERROR MESSAGE                                                      #
+######################################################################
+#
+# \u30a8\u30e9\u30fc\u30e1\u30c3\u30bb\u30fc\u30b8\u3092\u5b9a\u7fa9\u3057\u3066\u3044\u307e\u3059\u3002
+#
+labels.hi.errors.header=<div class="error_caution">
+labels.hi.errors.footer=</div><br/>
+labels.hi.errors.prefix=
+labels.hi.errors.suffix=
+
+DB010FC004_1=\u30af\u30ea\u30c6\u30a3\u30ab\u30eb\u30d1\u30b9\u304c\u5909\u66f4\u3055\u308c\u3066\u3044\u307e\u3059\u3002

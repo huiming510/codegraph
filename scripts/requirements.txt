@@ -1,0 +1,100 @@
+# CodeGraph — 全量依赖
+# =============================================================
+# 安装全部依赖（推荐）：
+#   pip install -r requirements.txt
+#
+# 仅运行建图流水线（已有 JSONL 输出，只需解析）：
+#   pip install tree-sitter
+#   pip install tree-sitter-java
+#   pip install tree-sitter-python
+#   pip install tree-sitter-javascript
+#   pip install tree-sitter-go
+#   pip install tree-sitter-cpp
+# =============================================================
+
+# ── tree-sitter 核心与语言 Parser ──────────────────────────────────
+tree-sitter>=0.25.0
+tree-sitter-java
+tree-sitter-python
+tree-sitter-javascript
+tree-sitter-go
+tree-sitter-cpp
+tree-sitter-c
+tree-sitter-c-sharp
+tree-sitter-rust
+tree-sitter-xml
+
+# ── Web 框架 ──────────────────────────────────────────────────────
+fastapi>=0.110.0
+uvicorn[standard]>=0.30.0
+starlette>=0.40.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-multipart>=0.0.9
+
+# ── HTTP / 异步 I/O ───────────────────────────────────────────────
+aiohttp>=3.9.0
+httpx>=0.27.0
+requests>=2.32.0
+aiofiles>=24.0.0
+
+# ── 数据库 / ORM ──────────────────────────────────────────────────
+sqlalchemy>=2.0.0
+aiosqlite>=0.20.0
+
+# ── 向量检索（可选，按需启用）────────────────────────────────────────
+# elasticsearch>=8.0.0
+# chromadb>=0.5.0
+# faiss-cpu>=1.8.0
+# pymilvus>=2.4.0
+
+# ── AI / LLM（可选，按需启用）───────────────────────────────────────
+openai>=1.0.0
+# anthropic>=0.30.0
+# zhipuai>=2.0.0
+
+# ── ML / NLP ──────────────────────────────────────────────────────
+numpy>=1.26.0
+pandas>=2.0.0
+scikit-learn>=1.5.0
+sentence-transformers>=3.0.0
+transformers>=4.40.0
+spacy>=3.8.0
+umap-learn>=0.5.0
+tiktoken>=0.7.0
+# spacy 模型（需单独下载）：
+#   python -m spacy download zh_core_web_sm
+#   python -m spacy download en_core_web_sm
+
+# ── 文档解析 ──────────────────────────────────────────────────────
+python-docx>=1.1.0
+openpyxl>=3.1.0
+python-pptx>=1.0.0
+pillow>=10.0.0
+docx2md>=0.1.0
+mammoth>=1.6.0
+xlrd>=2.0.0
+
+# ── 配置与数据格式 ─────────────────────────────────────────────────
+pyyaml>=6.0.0
+chardet>=5.0.0
+
+# ── 文本处理 ──────────────────────────────────────────────────────
+markdown>=3.7.0
+markdownify>=0.13.0
+markupsafe>=2.1.0
+lxml>=5.0.0
+
+# ── 日志与工具 ─────────────────────────────────────────────────────
+loguru>=0.7.0
+tqdm>=4.66.0
+cachetools>=5.0.0
+jwt>=2.8.0
+
+# ── 安全（PII 检测 / 脱敏，可选）────────────────────────────────────
+# presidio-analyzer>=2.2.0
+# presidio-anonymizer>=2.2.0
+
+# ── 测试 ───────────────────────────────────────────────────────────
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

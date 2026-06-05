@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR//DTD S2Container 2.4//EN"
+	"http://www.seasar.org/dtd/components24.dtd">
+<components>
+	<component name="jjmd5"
+			   class="jp.co.rct.jj.base.auth.JJMD5"
+			   instance="singleton">
+	</component>
+</components>

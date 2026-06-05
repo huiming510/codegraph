@@ -1,0 +1,12 @@
+#
+#  build.properties.Inspection8
+#
+##################################
+#      Environment
+##################################
+unyo-tool.env.dbhome = /web/dbhome/jj8
+
+##################################
+#      検品環境名
+##################################
+unyo-tool.env.kenpinname = K-8

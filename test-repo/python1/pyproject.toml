@@ -1,0 +1,81 @@
+[project]
+name = "lingzhi-ai-kg"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.13.2",
+    "aiohttp-retry>=2.9.1",
+    "aiosqlite>=0.19.0",
+    "chardet>=5.2.0",
+    "docx2md>=1.0.4",
+    "elasticsearch>=9.2.0",
+    "fastapi>=0.122.0",
+    "mammoth>=1.11.0",
+    "markdown>=3.10",
+    "markdownify>=1.2.0",
+    "numpy>=2.3.4",
+    "openai>=2.7.1",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.3",
+    "pillow>=12.0.0",
+    "presidio-analyzer>=2.2.360",
+    "presidio-anonymizer>=2.2.360",
+    "python-docx>=1.2.0",
+    "python-multipart>=0.0.22",
+    "python-pptx>=1.0.2",
+    "pyyaml>=6.0.3",
+    "requests>=2.32.5",
+    "scikit-learn>=1.7.2",
+    "sentence-transformers>=5.1.2",
+    "spacy>=3.8.11",
+    "tqdm>=4.67.1",
+    "transformers>=4.57.1",
+    "tree-sitter>=0.25.2",
+    "tree-sitter-c>=0.24.1",
+    "tree-sitter-c-sharp>=0.23.1",
+    "tree-sitter-cpp>=0.23.4",
+    "tree-sitter-go>=0.25.0",
+    "tree-sitter-java>=0.23.5",
+    "tree-sitter-javascript>=0.25.0",
+    "tree-sitter-python>=0.25.0",
+    "tree-sitter-rust>=0.24.0",
+    "tree-sitter-xml>=0.7.0",
+    "umap-learn>=0.5.9.post2",
+    "uvicorn>=0.38.0",
+    "xlrd>=2.0.2",
+]
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
+# 后端代码检查（ruff）：pip install ruff 后执行 scripts/check_backend.ps1
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["src/backend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# 测试（后端）：pip install pytest pytest-asyncio httpx 或 uv pip install -e ".[test]"
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["src/backend/tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+filterwarnings = ["ignore::DeprecationWarning"]

@@ -1,0 +1,103 @@
+/**
+ * 风格 B：浅灰层次 - 浅灰底、黑线、轻微层次
+ * 侧边菜单 + 黑白灰线条为主
+ */
+.layout-container.theme-minimal-b {
+  --layout-bg: #fafafa;
+  --layout-header-bg: #ffffff;
+  --layout-header-border: 1px solid #1a1a1a;
+  --layout-sider-bg: #ffffff;
+  --layout-sider-border: 1px solid #e8e8e8;
+  --layout-content-bg: #fafafa;
+  --layout-border: #e0e0e0;
+  --text-primary: #1a1a1a;
+  --text-secondary: #595959;
+  --menu-item-hover-bg: #f5f5f5;
+  --menu-item-selected-bg: #eeeeee;
+  --menu-item-selected-border: 2px solid #1a1a1a;
+  --logo-title-color: #1a1a1a;
+  --scrollbar-thumb: #bfbfbf;
+  --scrollbar-track: #f0f0f0;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+}
+
+.theme-minimal-b {
+  background: var(--layout-bg) !important;
+
+  .ant-layout-header {
+    background: var(--layout-header-bg) !important;
+    border-bottom: var(--layout-header-border) !important;
+    box-shadow: 0 1px 0 0 var(--layout-border);
+  }
+
+  .layout-header {
+    background: var(--layout-header-bg) !important;
+    border-bottom: var(--layout-header-border) !important;
+  }
+
+  .ant-layout-sider {
+    background: var(--layout-sider-bg) !important;
+
+    &::after {
+      display: none;
+    }
+  }
+
+  .ant-layout-sider-children {
+    border-inline-end: 1px solid var(--layout-sider-border) !important;
+  }
+
+  .ant-layout-content {
+    background: var(--layout-content-bg) !important;
+  }
+
+  .ant-menu {
+    color: var(--text-primary) !important;
+    background: transparent !important;
+  }
+
+  .ant-menu-item,
+  .ant-menu-submenu-title {
+    color: var(--text-primary) !important;
+  }
+
+  .ant-menu-item:hover,
+  .ant-menu-submenu-title:hover {
+    color: var(--text-primary) !important;
+    background: var(--menu-item-hover-bg) !important;
+  }
+
+  .ant-menu-item-selected {
+    color: var(--text-primary) !important;
+    background: var(--menu-item-selected-bg) !important;
+    border-left: var(--menu-item-selected-border);
+  }
+
+  .ant-menu-inline .ant-menu-item::after {
+    display: none;
+  }
+
+  .ant-menu-sub .ant-menu-item,
+  .ant-menu-sub .ant-menu-item .ant-menu-title-content {
+    color: var(--text-primary) !important;
+  }
+
+  .logo-area-title {
+    color: var(--logo-title-color) !important;
+    background: none !important;
+  }
+
+  .inner-page-card {
+    background: #ffffff;
+    border: 1px solid var(--layout-border);
+    box-shadow: var(--card-shadow);
+  }
+
+  .ant-layout-content::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  .ant-layout-content::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+}

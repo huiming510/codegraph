@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LinkRAG</title>
+  </head>
+  <body>
+    <div class="page">
+      <header class="app-header">
+        <h1>LinkRAG</h1>
+      </header>
+
+      <div class="app-shell">
+        <aside class="sidebar">
+          <div class="sidebar-head">
+            <button id="sidebarToggle" class="sidebar-toggle sidebar-toggle-inverse" type="button">☰</button>
+          </div>
+          <nav class="sidebar-nav">
+            <a href="#kb" data-route="kb">知识库</a>
+            <a href="#chat" data-route="chat">RAG</a>
+          </nav>
+        </aside>
+
+        <div class="app">
+          <div class="app-content">
+            <main id="kbPage" class="kb-layout view active">
+              <section class="card">
+                <h2>管理</h2>
+                <div class="row">
+                  <input id="indexName" class="kb-input" type="text" placeholder="名称(英文)" />
+                </div>
+                <div class="row actions">
+                  <button id="createIndexBtn">创建</button>
+                  <button id="deleteIndexBtn" class="ghost">删除</button>
+                  <button id="infoIndexBtn" class="ghost">查看</button>
+                </div>
+                <pre id="indexResult" class="result"></pre>
+              </section>
+
+              <section class="card">
+                <h2>分块策略</h2>
+                <div class="kv-list">
+                  <div class="kv-row">
+                    <label for="chunkSize">chunk_size：</label>
+                    <input id="chunkSize" class="kb-input" type="number" />
+                  </div>
+                  <div class="kv-row">
+                    <label for="chunkOverlap">chunk_overlap：</label>
+                    <input id="chunkOverlap" class="kb-input" type="number" />
+                  </div>
+                  <div class="kv-row">
+                    <label for="chunkStrategy">chunk_strategy：</label>
+                    <input id="chunkStrategy" class="kb-input" type="text" />
+                  </div>
+                </div>
+                <div class="row actions">
+                  <button id="updatePipelineBtn" class="ghost">更新分块策略</button>
+                </div>
+                <pre id="pipelineResult" class="result"></pre>
+              </section>
+
+              <section class="card kb-full">
+                <h2>文件管理</h2>
+                <div class="row">
+                  <input id="uploadIndex" class="kb-input" type="text" placeholder="名称(英文)" />
+                </div>
+                <input id="uploadFile" class="kb-file-input" type="file" />
+                <div class="row actions">
+                  <button id="uploadBtn">上传文件</button>
+                </div>
+                <pre id="uploadResult" class="result"></pre>
+              </section>
+            </main>
+
+            <main id="chatPage" class="chat-layout view">
+              <section class="panel chat">
+                <div class="chat-head card">
+                  <div class="chat-title-row">
+                    <h2>RAG Chat</h2>
+                  </div>
+                </div>
+
+                <div id="messages" class="messages card"></div>
+
+                <div class="composer card">
+                  <div class="query-box">
+                    <div class="row">
+                      <input id="chatIndex" type="text" placeholder="知识库（必填）" />
+                    </div>
+                    <textarea id="utterance" rows="4" placeholder="输入问题，按 Ctrl/Cmd + Enter 发送"></textarea>
+                  </div>
+                  <div class="row actions between">
+                    <button id="sendBtn">发送</button>
+                    <button id="clearBtn" class="ghost">清空会话</button>
+                  </div>
+                </div>
+              </section>
+
+              <aside class="panel right-panel">
+                <section class="card model-settings">
+                  <h2>模型 API 设置</h2>
+                  <div class="kv-list">
+                    <div class="kv-row">
+                      <label for="modelName">model：</label>
+                      <input id="modelName" type="text" />
+                    </div>
+                    <div class="kv-row">
+                      <label for="modelBaseUrl">base_url：</label>
+                      <input id="modelBaseUrl" type="text" />
+                    </div>
+                    <div class="kv-row">
+                      <label for="apiKey">api_key：</label>
+                      <input id="apiKey" type="password" />
+                    </div>
+                  </div>
+                  <div class="kv-row">
+                    <label for="thinking">thinking：</label>
+                    <div class="check-wrap">
+                      <input id="thinking" type="checkbox" />
+                    </div>
+                  </div>
+                  <div class="row actions">
+                    <button id="updateModelBtn">更新模型配置</button>
+                  </div>
+                  <pre id="settingsResult" class="result"></pre>
+                </section>
+
+                <section class="card">
+                  <h2>检索 / 生成参数</h2>
+                  <div class="kv-list">
+                    <div class="kv-row">
+                      <label for="generateModel">模型：</label>
+                      <input id="generateModel" type="text" value="Qwen3-30B-A3B-Instrunct-2507" />
+                    </div>
+                    <div class="kv-row">
+                      <label for="temperature">temperature：</label>
+                      <input id="temperature" type="number" step="0.01" />
+                    </div>
+                    <div class="kv-row">
+                      <label for="topP">top_p：</label>
+                      <input id="topP" type="number" step="0.01" />
+                    </div>
+                    <div class="kv-row">
+                      <label for="searchMethod">检索方式：</label>
+                      <select id="searchMethod">
+                        <option value="dense">dense</option>
+                        <option value="dense_filter">dense_filter</option>
+                        <option value="hybrid">hybrid</option>
+                        <option value="sparse">sparse</option>
+                      </select>
+                    </div>
+                    <div class="kv-row">
+                      <label for="topK">top_k：</label>
+                      <input id="topK" type="number" />
+                    </div>
+                    <div class="kv-row">
+                      <label for="threshold">threshold：</label>
+                      <input id="threshold" type="number" step="0.01" />
+                    </div>
+                  </div>
+                </section>
+              </aside>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

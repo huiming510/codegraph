@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR//DTD S2Container 2.4//EN"
+	"http://www.seasar.org/dtd/components24.dtd">
+
+<components>
+
+    <include path="default-customizer.dicon" />
+
+    <component name="actionCustomizer"
+        class="org.seasar.framework.container.customizer.CustomizerChain">
+
+        <initMethod name="addAspectCustomizer">
+            <arg>"aop.traceInterceptor"</arg>
+        </initMethod>
+
+        <initMethod name="addAspectCustomizer">
+            <arg>"actionMessagesThrowsInterceptor"</arg>
+        </initMethod>
+
+        <!-- 例外ハンドリング用Interceptor -->
+        <initMethod name="addAspectCustomizer">
+            <arg>"JJThrowableInterceptor"</arg>
+        </initMethod>
+
+        <initMethod name="addCustomizer">
+            <arg>
+                <component
+                    class="org.seasar.framework.container.customizer.TxAttributeCustomizer" />
+            </arg>
+        </initMethod>
+
+        <!-- Token用の設定はここから -->
+        <initMethod name="addAspectCustomizer">
+            <arg>"tokenInterceptor"</arg>
+            <arg>true</arg>
+        </initMethod>
+
+        <initMethod name="addAspectCustomizer">
+            <arg>"tokenCheckInterceptor"</arg>
+            <arg>true</arg>
+        </initMethod>
+
+        <!-- Token用の設定はここまで -->
+        <initMethod name="addCustomizer">
+            <arg>
+                <component
+                    class="r2framework.web.customizer.R2ActionCustomizer" />
+            </arg>
+        </initMethod>
+
+        <!-- 共通カラム自動セットの設定 -->
+        <initMethod name="addAspectCustomizer">
+            <arg>"generalColumnInterceptor"</arg>
+        </initMethod>
+
+        <!-- 日付取得 -->
+        <initMethod name="addAspectCustomizer">
+            <arg>"dateInterceptor"</arg>
+        </initMethod>
+
+        <!-- 行動履歴/デバッグプリント用 -->
+        <initMethod name="addAspectCustomizer">
+            <arg>"actionCallbackInterceptor"</arg>
+        </initMethod>
+
+        <!-- R2Profile -->
+        <initMethod name="addAspectCustomizer">
+            <arg>"performanceProbeInterceptor"</arg>
+        </initMethod>
+
+    </component>
+
+    <component name="formCustomizer"
+        class="org.seasar.framework.container.customizer.CustomizerChain">
+    </component>
+
+    <component name="serviceCustomizer"
+        class="org.seasar.framework.container.customizer.CustomizerChain">
+
+        <initMethod name="addAspectCustomizer">
+            <arg>"aop.traceInterceptor"</arg>
+        </initMethod>
+
+        <initMethod name="addCustomizer">
+            <arg>
+                <component
+                    class="org.seasar.framework.container.customizer.TxAttributeCustomizer" />
+            </arg>
+        </initMethod>
+        <initMethod name="addAspectCustomizer">
+            <arg>"callTraceInterceptor"</arg>
+        </initMethod>
+
+        <!-- 行動履歴/デバッグプリント用 -->
+        <initMethod name="addAspectCustomizer">
+            <arg>"serviceCallbackInterceptor"</arg>
+        </initMethod>
+
+        <!-- R2Profile -->
+        <initMethod name="addAspectCustomizer">
+            <arg>"performanceProbeInterceptor"</arg>
+        </initMethod>
+
+    </component>
+
+</components>

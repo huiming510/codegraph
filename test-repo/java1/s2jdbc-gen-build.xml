@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="unyo-tool" default="gen-entity" basedir=".">
+
+	<property name="classpathDir" value="webapp/WEB-INF/classes" />
+	<property name="libDir" value="webapp/WEB-INF/lib" />
+	<property name="rootPackageName" value="jp.co.rct.jj" />
+	<property name="entityPackageName" value="entity" />
+	<property name="javaFileDestDir" value="src/main/java" />
+	<property name="javaFileEncoding" value="UTF-8" />
+
+	<!-- 対象となるテーブルを正規表現で指定 -->
+	<property name="tableNamePattern" value="Users|Address" />
+
+	<path id="classpath">
+		<pathelement location="${classpathDir}" />
+		<fileset dir="${libDir}" />
+	</path>
+
+	<taskdef resource="s2jdbc-gen-task.properties" classpathRef="classpath" />
+
+	<!-- エンティティクラス作成 -->
+	<target name="gen-entity">
+		<gen-entity
+			tableNamePattern="${tableNamePattern}"
+			showTableName="true"
+			showColumnName="true"
+			overwrite="false"
+			rootPackageName="${rootPackageName}"
+			entityPackageName="${entityPackageName}"
+			javaFileDestDir="${javaFileDestDir}"
+			javaFileEncoding="${javaFileEncoding}"
+			classpathRef="classpath"
+		/>
+		<javac
+			srcdir="${javaFileDestDir}"
+			destdir="${classpathDir}"
+			encoding="${javaFileEncoding}"
+			fork="true"
+			debug="on"
+			classpathRef="classpath">
+				<include name="${rootPackageName}/${entityPackageName}/**" />
+		</javac>
+	</target>
+
+	<!-- DDL生成 -->
+<!--
+	<target name="gen-ddl">
+		<gen-ddl
+			classpathDir="${classpathDir}"
+			rootPackageName="${rootPackageName}"
+			entityPackageName="${entityPackageName}"
+			classpathRef="classpath"
+		/>
+	</target>
+ -->
+
+	<!-- DBのマイグレーションを実行 -->
+<!--	<target name="migrate">
+		<migrate
+			rootPackageName="${rootPackageName}"
+			entityPackageName="${entityPackageName}"
+			javaFileDestDir="${javaFileDestDir}"
+			javaFileEncoding="${javaFileEncoding}"
+			classpathRef="classpath"
+		/>
+	</target>
+ -->
+</project>

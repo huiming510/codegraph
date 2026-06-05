@@ -1,0 +1,29 @@
+fastapi>=0.109.0
+uvicorn>=0.27.0
+python-multipart>=0.0.6
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+httpx>=0.26.0
+python-dotenv>=1.0.0
+
+# 数据库（SQLite 异步）
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+asyncpg>=0.30.0
+
+# 认证
+PyJWT>=2.8.0
+
+# 日志
+loguru>=0.7.0
+
+# YAML 配置处理
+PyYAML>=6.0.0
+
+# Elasticsearch（按配置创建索引，与解析服务共用同一 ES；async 用于 AsyncElasticsearch）
+elasticsearch[async]>=8.0.0
+
+# LLM Providers (按需安装)
+# openai>=1.10.0        # OpenAI / Azure OpenAI / Qwen
+# anthropic>=0.18.0     # Anthropic Claude
+# zhipuai>=2.0.0        # 智谱AI GLM

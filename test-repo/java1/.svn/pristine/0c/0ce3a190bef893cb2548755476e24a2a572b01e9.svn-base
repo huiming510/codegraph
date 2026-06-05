@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR//DTD S2Container 2.4//EN"
+ "http://www.seasar.org/dtd/components24.dtd">
+<components>
+
+    <!-- 暗号化       -->
+    <include path="r2cipher.dicon" />
+
+    <!-- クッキーセッション -->
+    <component name="r2session"
+        class="r2framework.web.session.CookieR2Session"
+        instance="request" />
+    <component name="sessionEncoder"
+        class="r2framework.web.session.SessionEncoderImpl" />
+
+    <!-- クッキーセッション -->
+    <component name="cookieSessionInterceptor"
+        class="jp.co.rct.jj.base.session.SubDomainCookieSessionInterceptor">
+        <property name="timeout">18000</property>
+        <property name="path">"/"</property>
+        <property name="sessionCookiePrefix">"R2_F_S"</property>
+        <property name="permanentCookiePrefix">"R2_F_P"</property>
+    </component>
+
+</components>

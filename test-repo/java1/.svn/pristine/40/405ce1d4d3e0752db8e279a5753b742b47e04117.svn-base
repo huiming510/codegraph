@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+  						http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<!-- +===========================================================================
+		１.POM 基本設定情報 groupId,artifactId,packaging,version parentの設定は行います。 親POMでは
+		・r2framework ・seasar ・seasarで使用するもの（aopalliance、ognl） ・jj-base-common ・heritage-ol
+		が定義してあり、parentを指定することでライブラリの取得ができます。 上記のライブラリをこのPOMに定義した場合、このPOMのバージョンが有効になります。
+		+=========================================================================== -->
+	<!-- jj-super-pom -->
+	<parent>
+		<groupId>jp.co.rct.jj</groupId>
+		<artifactId>jj-super-pom</artifactId>
+		<version>1.9-SNAPSHOT</version>
+	</parent>
+
+	<groupId>jp.co.rct.jj</groupId>
+	<artifactId>unyo-tool</artifactId>
+	<packaging>war</packaging>
+	<version>1.0-SNAPSHOT</version>
+
+	<!-- +===========================================================================
+		2.基本設定情報 このプロジェクトの名称、概要などを表記します。 +=========================================================================== -->
+	<!-- +=======================================================================
+		2.1 プロジェクト名称・概要 ～この名称がヘッダーの名称になります。 必ず上書きしてください。 +======================================================================= -->
+	<name>unyo-tool</name>
+	<description>unyo tool project</description>
+	<!-- +=======================================================================
+		2.9 mavenバージョン +======================================================================= -->
+	<prerequisites>
+		<maven>2.0.9</maven>
+	</prerequisites>
+	<!-- +===========================================================================
+		3.DistoributionManagement（Deploy用のリポジトリー）設定 +===========================================================================
+		+=======================================================================
+		deployフェイズでdeployされるべき社内リポジトリーを記載する。 通常バージョンとSNAPSHOTバージョン、SITEとをわけて記載可能。
+		siteについてはr2framewaorkとかち合うのを避けるため 別ディレクトリにしています。 ※成長して異動させるために、Relocationタグが存在する。
+		+======================================================================= -->
+
+
+	<properties>
+		<maven.test.skip>true</maven.test.skip>
+	</properties>
+
+	<profiles>
+		<!-- ローカル開発環境 -->
+		<profile>
+			<id>local-devel</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<buildFinalName>${project.artifactId}-${project.version}</buildFinalName>
+				<overrideResourceName>main</overrideResourceName>
+			</properties>
+		</profile>
+		<!-- 統一テンプレート -->
+		<profile>
+			<id>template</id>
+			<properties>
+				<buildFinalName>${project.artifactId}-${project.version}</buildFinalName>
+				<overrideResourceName>template</overrideResourceName>
+				<!-- this is relative to the webapp directory -->
+				<mpContents>mp/**</mpContents>
+			</properties>
+		</profile>
+		<!-- G8開発(統合テスト)環境 -->
+		<profile>
+			<id>integration</id>
+			<properties>
+				<buildFinalName>${project.artifactId}-${project.version}</buildFinalName>
+				<overrideResourceName>integration</overrideResourceName>
+				<!-- this is relative to the webapp directory -->
+				<mpContents>mp/**</mpContents>
+			</properties>
+		</profile>
+		<!-- 検品環境 -->
+		<profile>
+			<id>inspection</id>
+			<properties>
+				<buildFinalName>${project.artifactId}</buildFinalName>
+				<overrideResourceName>inspection</overrideResourceName>
+				<!-- this is relative to the webapp directory -->
+				<mpContents>mp/**</mpContents>
+			</properties>
+		</profile>
+		<!-- サービス本番環境 -->
+		<profile>
+			<id>service_honban</id>
+			<properties>
+				<buildFinalName>${project.artifactId}</buildFinalName>
+				<overrideResourceName>service_honban</overrideResourceName>
+				<!-- this is relative to the webapp directory -->
+				<mpContents>mp/**</mpContents>
+			</properties>
+		</profile>
+		<!-- 運用本番環境 -->
+		<profile>
+			<id>unyo_honban</id>
+			<properties>
+				<buildFinalName>${project.artifactId}</buildFinalName>
+				<overrideResourceName>unyo_honban</overrideResourceName>
+				<!-- this is relative to the webapp directory -->
+				<mpContents>mp/**</mpContents>
+			</properties>
+		</profile>
+	</profiles>
+
+	<!-- +===========================================================================
+		5.BUILDプロセスの記述 ここも基本変わらない。 siteはチュートリアルのソースとセットで作ることを前提にします。 理由としては、今後JavaDocの記述方法など説明を加えることを考えると、
+		一緒にしておいたほうがいいと思うためです。 +=========================================================================== -->
+	<build>
+
+		<finalName>unyo-tool</finalName>
+
+		<!-- +=======================================================================
+			5.1. WAGON(deploy用plugin定義) +======================================================================= -->
+		<!-- なくてもDAVはデフォルトで動作するっぽい -->
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-webdav</artifactId>
+				<version>1.0-beta-2</version>
+			</extension>
+		</extensions>
+
+		<!-- +=======================================================================
+			5.2. pluginManagementの定義 ・プラグインマネジメントは、実際に実行されるフェイズ、ゴールが子POM 側で明示されて、はじめて動作する。
+			ここではpluginManagementは使わない。 すべてpluginsの設定でいいはず。 +=======================================================================
+			<pluginManagement> -->
+		<resources>
+			<!-- profile指定した設定ファイルでmainを上書きする -->
+			<resource>
+				<directory>src/${overrideResourceName}/resources</directory>
+				<filtering>true</filtering>		<!-- ビルド変数の置換設定 -->
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+			</resource>
+		</resources>
+
+		<filters>
+			<filter>build.properties</filter>
+		</filters>
+
+		<plugins>
+			<!-- SVNからのチェックアウトに必要 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-scm-plugin</artifactId>
+				<version>1.0</version>
+				<configuration>
+					<goals>install</goals>
+				</configuration>
+			</plugin>
+
+			<!-- Webプロジェクト時の指定 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<webResources>
+						<resource>
+							<directory>${basedir}/webapp</directory>
+							<targetPath>/</targetPath>
+							<filtering>false</filtering>
+						</resource>
+					</webResources>
+					<warSourceExcludes>${mpContents}</warSourceExcludes>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+
+			<!-- +===============================================================
+				5.2.1 【プラグイン名】maven-compiler-plugin ・compiler用に別プロセスを起動。 ・ヒープサイズを別途定義 【Build
+				Lifecycle】Default Lifecycle 【実行フェイズ】compile,test-compile 【利用ゴール】compile,testCompile
+				+=============================================================== -->
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+					<encoding>UTF-8</encoding>
+					<fork>true</fork>
+					<meminitial>64m</meminitial>
+					<maxmem>368m</maxmem>
+				</configuration>
+			</plugin>
+			<!-- +===============================================================
+				5.2.2 【プラグイン名】maven-surefire-plugin ・Junit Testプラグイン ・ヒープサイズを別途定義 【Build
+				Lifecycle】Default Lifecycle 【実行フェイズ】test 【利用ゴール】test +=============================================================== -->
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.4.3</version>
+				<configuration>
+					<includes>
+						<include>**/*Test.java</include>
+					</includes>
+					<argLine>-Xmx386m</argLine>
+				</configuration>
+			</plugin>
+			<!-- +===============================================================
+				5.2.3 【プラグイン名】maven-deploy-plugin 【Build Lifecycle】Default Lifecycle 【実行フェイズ】deploy
+				【利用ゴール】deploy +=============================================================== -->
+			<plugin>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<configuration>
+					<updateReleaseInfo>true</updateReleaseInfo>
+				</configuration>
+			</plugin>
+			<!-- +===============================================================
+				5.2.4 【プラグイン名】maven-site-plugin 【Build Lifecycle】Site Lifecycle 【実行フェイズ】site
+				【利用ゴール】site +=============================================================== -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-site-plugin</artifactId>
+				<version>2.0-beta-7</version>
+				<configuration>
+					<locales>ja</locales>
+					<inputEncoding>UTF-8</inputEncoding>
+					<outputEncoding>UTF-8</outputEncoding>
+				</configuration>
+			</plugin>
+			<!-- +===============================================================
+				5.2.5 Eclipse設定 ・ここでは、Eclipse上のClasspathへの設定や、TOMCATから利用 できりょうに、/webapp/WEB-INF/libへのコピーをするゴールを
+				定義する。 【Build Lifecycle】Site Lifecycle 【実行フェイズ】site 【利用ゴール】site +=============================================================== -->
+			<!-- +===============================================================
+				5.2.5.1 WEB-INF配下のCLEAN ・/webapp/WEB-INF/lib配下を削除する。 ・mvn clean antrun:run
+				で実行可能 【Build Lifecycle】Clean Lifecycle 【実行フェイズ】clean 【プラグイン名】maven-antrun-plugin
+				【利用ゴール】run +=============================================================== -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>delete-WEB-INF-lib</id>
+						<phase>pre-clean</phase>
+						<configuration>
+							<tasks>
+								<echo message="${basedir}/webapp/WEB-INF/lib delete" />
+								<delete dir="${basedir}/webapp/WEB-INF/lib" />
+							</tasks>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- +===============================================================
+				5.2.5.2 MavenクラスパスをWEB-INF配下へコピー 【Build Lifecycle】なし 【実行フェイズ】未定義 【プラグイン名】maven-dependency-plugin
+				【利用ゴール】copy-dependencies +=============================================================== -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${basedir}/webapp/WEB-INF/lib</outputDirectory>
+							<excludeScope>provided</excludeScope>
+							<overWriteIfNewer>true</overWriteIfNewer>
+							<overWriteReleases>false</overWriteReleases>
+							<overWriteSnapshots>false</overWriteSnapshots>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- +===============================================================
+				5.2.6 【プラグイン名】maven-eclipse-plugin 【Build Lifecycle】なし 【実行フェイズ】未定義 【プラグイン名】maven-eclipse-plugin
+				【利用ゴール】clean +=============================================================== -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-eclipse-plugin</artifactId>
+				<configuration>
+					<buildOutputDirectory>webapp/WEB-INF/classes</buildOutputDirectory>
+					<additionalProjectnatures>
+						<projectnature>com.sysdeo.eclipse.tomcat.tomcatnature</projectnature>
+					</additionalProjectnatures>
+					<useProjectReferences>false</useProjectReferences>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	<!-- +===========================================================================
+		7.依存ファイルの定義 基本的にすべてr2frameworkに依存するので、それ以外はいらないはず +=========================================================================== -->
+	<dependencies>
+		<!-- +===========================================================================
+			7.1. 社外リポジトリーに存在するもの とりあえず、coreとwebのみです。 必要があれば、順次足していきます。 +=========================================================================== -->
+		<!-- +===========================================================================
+			7.1.3 org.apache.geronimo.specs +=========================================================================== -->
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-jsp_2.0_spec</artifactId>
+			<version>1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-j2ee_1.4_spec</artifactId>
+			<version>1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-servlet_2.4_spec</artifactId>
+			<version>1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-jta_1.1_spec</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-ejb_2.1_spec</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-annotation_1.0_spec</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-ejb_3.0_spec</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-interceptor_3.0_spec</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-jpa_3.0_spec</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<!-- +===========================================================================
+			7.1.4 STRUTS関連 +=========================================================================== -->
+		<dependency>
+			<groupId>struts</groupId>
+			<artifactId>struts-believe</artifactId>
+			<version>1.2.9</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>oro</artifactId>
+					<groupId>oro</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>oro</groupId>
+			<artifactId>oro</artifactId>
+			<version>2.0.8</version>
+		</dependency>
+		<!-- +===========================================================================
+			7.1.5 commons関連 +=========================================================================== -->
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>1.2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.3</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-httpclient</groupId>
+			<artifactId>commons-httpclient</artifactId>
+			<version>3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>1.1</version>
+			<type>jar</type>
+			<exclusions>
+				<exclusion>
+					<artifactId>avalon-framework</artifactId>
+					<groupId>avalon-framework</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>logkit</artifactId>
+					<groupId>logkit</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>log4j</artifactId>
+					<groupId>log4j</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>servlet-api</artifactId>
+					<groupId>javax.servlet</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>commons-collections</groupId>
+			<artifactId>commons-collections</artifactId>
+			<version>3.2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-validator</groupId>
+			<artifactId>commons-validator</artifactId>
+			<version>1.3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>1.4</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-el</groupId>
+			<artifactId>commons-el</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-net</groupId>
+			<artifactId>commons-net</artifactId>
+			<version>2.0</version>
+		</dependency>
+		<!-- +===========================================================================
+			7.1.6 log4j関連 +=========================================================================== -->
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.15</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.sun.jmx</groupId>
+					<artifactId>jmxri</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>javax.jms</groupId>
+					<artifactId>jms</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.sun.jdmk</groupId>
+					<artifactId>jmxtools</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- +===========================================================================
+			7.1.7 JSTL・TAGLIBなど +=========================================================================== -->
+		<dependency>
+			<groupId>taglibs</groupId>
+			<artifactId>standard</artifactId>
+			<version>1.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.1.2</version>
+		</dependency>
+		<!-- +===========================================================================
+			7.1.10 その他 +=========================================================================== -->
+		<dependency>
+			<groupId>xml-apis</groupId>
+			<artifactId>xml-apis</artifactId>
+			<version>1.3.03</version>
+		</dependency>
+		<dependency>
+			<groupId>xpp3</groupId>
+			<artifactId>xpp3</artifactId>
+			<version>1.1.3.4.O</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi</artifactId>
+			<version>3.10-FINAL</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>3.10-FINAL</version>
+		</dependency>
+		<dependency>
+			<groupId>oracle.jdbc</groupId>
+			<artifactId>ojdbc6</artifactId>
+			<version>1.0</version>
+		</dependency>
+	</dependencies>
+</project>

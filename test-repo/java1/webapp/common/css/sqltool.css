@@ -1,0 +1,208 @@
+@charset "utf-8";
+
+div {
+	display: block;
+}
+
+li {
+	list-style: none;
+}
+
+dt {
+	float: left;
+}
+
+dd {
+	margin-left: 80px;
+}
+
+label {
+	cursor: pointer;
+	margin-left: 10px;
+}
+
+.balloon-top {
+	position: relative;
+	display: inline-block;
+	margin: 1.5em 0;
+	padding: 7px 10px;
+	min-width: 120px;
+	max-width: 100%;
+	color: #555;
+	font-size: 16px;
+	background: #e0edff;
+}
+
+.balloon-top:before {
+	content: "";
+	position: absolute;
+	top: -30px;
+	left: 43%;
+	margin-left: -15px;
+	border: 15px solid transparent;
+	border-bottom: 15px solid #e0edff;
+}
+
+.balloon-top ul {
+	margin: 0;
+	padding: 0;
+}
+
+.sql001-container {
+	width: 950px;
+	padding-left: 15px;
+}
+
+.sql001-dbkanri-link {
+	margin: 15px;
+	font-size: 24px;
+	display: inline;
+}
+
+.sql001-infomation {
+	margin: 15px;
+	font-size: 24px;
+	display: inline;
+}
+
+.sql001-infomation-click {
+	text-decoration: underline;
+	color: #337ab7;
+	cursor: pointer;
+	display: inline-block;
+}
+
+.sql001-env {
+	width: 350px;
+	float: left;
+}
+
+.sql001-choose-server {
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.sql001-choose-db {
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.sql001-filedownload {
+	width: 450px;
+	float: left;
+	border-left: 1px solid #00000F;
+	padding-left: 50px;
+}
+
+.sql001-choose-downloadExtension {
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
+.sql001-choose-charset {
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
+.w100 {
+	width: 100px;
+}
+
+.w200 {
+	width: 200px;
+}
+
+.submit-button {
+	margin-left: 20px;
+	margin-bottom: 5px;
+	cursor: pointer;
+	color: #FFFFFF;
+	text-shadow: -1px -1px 1px #DD6200, 0 1px 1px #F88C20;
+	background-color: #F77C00;
+	border-bottom: 2px solid #D26A00;
+	border-radius: 3px;
+	box-shadow: 0 2px 1px #D9D9D9;
+}
+
+.dispMessage {
+	font-size: 24pt;
+	color: red;
+}
+
+.resultCount {
+	font-size: 24pt;
+}
+
+.sql001-inputarea {
+	width: 100%;
+}
+
+textarea:focus {
+	width: 100%;
+	background-color: #CCFFCC;
+}
+
+.sql001-input-sql {
+	width: 80%;
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
+.sql001-outputarea {
+	padding-right: 20px;
+	margin-top: 5px;
+	margin-bottom: 100px;
+	width: max-content;
+}
+
+.tableClickColor {
+	background-color: #F0E68C;
+}
+
+thead {
+	background-color: #E0FFFF;
+}
+
+td {
+	padding: 5px;
+}
+
+.localStorageSQL{
+	display: none;
+	position: fixed;
+	top: 90px;
+	right: 0;
+	padding: 0 2vw;
+	border: solid 1px black;
+	background: white;
+	z-index: 2;
+}
+
+.sqlList{
+	margin-top: 5vh;
+}
+
+#localStorageSQLTitle{
+	float:left;
+	font-size:1.5rem;
+	color:#337ab7;
+}
+
+#js-closeSaveSqlWindow{
+	text-align:right;
+	margin-bottom:1.5rem;
+}
+
+#js-closeSaveSqlWindow > span{
+	cursor:pointer;
+	color:#d9534f;
+}
+
+.sqlList > ul > li > span{
+	color:#337ab7;
+	cursor: pointer;
+}
+
+.sqlList > ul > li > button{
+	margin-left:1rem;
+}

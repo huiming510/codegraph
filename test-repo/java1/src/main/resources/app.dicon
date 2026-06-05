@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR//DTD S2Container 2.4//EN"
+	"http://www.seasar.org/dtd/components24.dtd">
+<components>
+
+    <!-- ↓↓↓↓↓↓↓↓↓↓【diconのinclude】[ココカラ]↓↓↓↓↓↓↓↓↓↓ -->
+    <include path="convention.dicon" />
+    <include path="aop.dicon" />
+    <include path="j2ee.dicon" />
+
+    <!-- JDBC Manager -->
+    <include path="s2jdbc.dicon" />
+    <!-- 暗号化       -->
+    <include path="r2cipher.dicon" />
+    <!-- 同期トークン -->
+    <include path="r2token.dicon" />
+    <!-- 環境変数サービス -->
+    <include path="env-value-define-xjj.dicon" />
+    <!-- デバッグプリント用 -->
+    <include path="debug-print.dicon" />
+    <!-- HTTPリクエストアクセッサー -->
+    <include path="http-request-accessor.dicon" />
+    <!-- ウィルスソフト -->
+    <include path="r2sophos.dicon" />
+    <!-- JJ暗号化 -->
+    <include path="jjcipher.dicon" />
+    <!-- クッキーセッション -->
+    <include path="cookieSession.dicon" />
+    <!-- R2ASP -->
+    <include path="r2asp.dicon" />
+    <!-- ↑↑↑↑↑↑↑↑↑↑【diconのinclude】[ココマデ]↑↑↑↑↑↑↑↑↑↑ -->
+
+    <!-- ↓↓↓↓↓↓↓↓↓↓【Interceptor   】[ココカラ]↓↓↓↓↓↓↓↓↓↓ -->
+    <component name="actionMessagesThrowsInterceptor"
+        class="org.seasar.struts.interceptor.ActionMessagesThrowsInterceptor" />
+
+    <!-- 日付取得 -->
+    <component name="dateInterceptor"
+        class="r2framework.core.interceptor.DateInterceptor" />
+
+    <!-- クエリーログ -->
+    <component name="queryLogInterceptor"
+        class="jp.co.rct.jj.base.interceptor.QueryLogInterceptor" >
+        <property name="allowableTime">3000</property>
+    </component>
+    <!-- ↑↑↑↑↑↑↑↑↑↑【Interceptor   】[ココマデ]↑↑↑↑↑↑↑↑↑↑-->
+
+
+    <!-- リクエストプロセッサ(r2framework拡張クラスの指定) -->
+    <component name="requestProcessorCustomizer"
+        class="r2framework.web.request.RequestProcessorCustomizerImpl">
+        <!-- クエリーログ出力用 -->
+        <initMethod name="addInterceptor">
+            <arg>"queryLogInterceptor"</arg>
+        </initMethod>
+        <initMethod name="addInterceptor">
+            <arg>"cookieSessionInterceptor"</arg>
+        </initMethod>
+    </component>
+
+    <!-- 日付取得 -->
+    <component name="r2Date" class="r2framework.core.util.impl.R2DateServerTimeImpl" />
+
+    <!-- Action向け実行時間取得Interceptor -->
+    <component name="actionCallbackInterceptor"
+        class="r2framework.web.interceptor.ExecTimeInterceptor">
+    </component>
+
+    <!-- Service向け実行時間取得Interceptor -->
+    <component name="serviceCallbackInterceptor"
+        class="r2framework.web.interceptor.ExecTimeInterceptor">
+    </component>
+
+    <!-- リクエストコンテキスト-->
+    <component name="requestContext" autoBinding="auto"
+        class="java.util.HashMap" instance="request" />
+
+    <!-- R2Profile -->
+    <component name="performanceProbeInterceptor"
+        class="r2framework.profile.interceptor.PerformanceProbeInterceptor" />
+
+</components>

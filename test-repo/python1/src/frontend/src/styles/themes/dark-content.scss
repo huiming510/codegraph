@@ -1,0 +1,534 @@
+/**
+ * 深色顶栏时，主内容区及各页面组件一并变为深色
+ * 作用域：.layout-container.header-style-dark
+ */
+$dark-bg: #141414;
+$dark-bg-elevated: #1f1f1f;
+$dark-border: #303030;
+$dark-text: rgb(255 255 255 / 85%);
+$dark-text-secondary: rgb(255 255 255 / 65%);
+$dark-text-tertiary: rgb(255 255 255 / 45%);
+
+.layout-container.header-style-dark {
+  .ant-layout-content {
+    background: $dark-bg !important;
+  }
+
+  .main-page,
+  .has-sider-main {
+    background: $dark-bg !important;
+  }
+
+  /* 内容区滚动条 */
+  .ant-layout-content::-webkit-scrollbar-track {
+    background: #1f1f1f;
+  }
+
+  .ant-layout-content::-webkit-scrollbar-thumb {
+    background: #434343;
+    border-radius: 4px;
+  }
+
+  .ant-layout-content::-webkit-scrollbar-thumb:hover {
+    background: #535353;
+  }
+
+  /* 通用卡片 */
+  .inner-page-card {
+    color: $dark-text;
+    background-color: $dark-bg-elevated !important;
+    border-color: $dark-border !important;
+    box-shadow: 0 0 12px rgb(0 0 0 / 25%);
+  }
+
+  /* Ant Design 卡片（内容区内） */
+  .ant-layout-content .ant-card {
+    color: $dark-text;
+    background: $dark-bg-elevated !important;
+    border-color: $dark-border !important;
+
+    .ant-card-body {
+      color: inherit;
+    }
+  }
+
+  /* 通用页面容器与标题 */
+  .ant-layout-content .page-title {
+    color: $dark-text !important;
+  }
+
+  .ant-layout-content .page-header {
+    color: $dark-text;
+  }
+
+  .ant-layout-content .empty-state {
+    color: $dark-text-secondary;
+
+    h3 {
+      color: $dark-text !important;
+    }
+
+    p {
+      color: $dark-text-secondary;
+    }
+
+    .anticon {
+      color: $dark-text-tertiary !important;
+    }
+  }
+
+  /* 会话列表页 chat/list */
+  .ant-layout-content .chat-container {
+    color: $dark-text;
+
+    .session-card {
+      .session-info .session-title {
+        color: $dark-text !important;
+      }
+
+      .session-summary {
+        color: $dark-text-secondary !important;
+      }
+
+      .session-meta .session-time {
+        color: $dark-text-tertiary !important;
+      }
+    }
+  }
+
+  /* 对话详情页 chat/detail：左侧会话栏 + 右侧聊天区整体深色 */
+  .ant-layout-content .chat-container .chat-sidebar {
+    background: $dark-bg-elevated !important;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
+  }
+
+  .ant-layout-content .chat-container .sidebar-header {
+    border-bottom-color: $dark-border !important;
+
+    .sidebar-title {
+      color: $dark-text !important;
+    }
+  }
+
+  .ant-layout-content .chat-container .sessions-list {
+    color: $dark-text;
+  }
+
+  .ant-layout-content .chat-container .chat-main {
+    background: $dark-bg-elevated !important;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
+  }
+
+  .ant-layout-content .chat-container .chat-header {
+    color: $dark-text;
+    border-bottom-color: $dark-border !important;
+
+    .chat-title span {
+      color: $dark-text !important;
+    }
+
+    .chat-title span[style*="color: #8c8c8c"] {
+      color: $dark-text-secondary !important;
+    }
+
+    .online-tag {
+      color: #52c41a !important;
+      background: rgb(82 196 26 / 15%) !important;
+      border-color: rgb(82 196 26 / 40%) !important;
+    }
+
+    .online-dot {
+      background: #52c41a;
+    }
+
+    .ant-btn-text {
+      color: $dark-text-secondary !important;
+    }
+
+    .ant-btn-text:hover:not(:disabled) {
+      color: #0ea5e9 !important;
+    }
+
+    .ant-select .ant-select-selector,
+    .ant-select-selection-item,
+    .ant-select .ant-select-selection-placeholder {
+      color: $dark-text !important;
+    }
+  }
+
+  .ant-layout-content .chat-container .chat-list {
+    background: $dark-bg !important;
+  }
+
+  .ant-layout-content .chat-container .chat-welcome {
+    color: $dark-text;
+    background: rgb(102 126 234 / 12%) !important;
+
+    .welcome-icon {
+      color: #ffffff;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+  }
+
+  .ant-layout-content .chat-container .chat-send {
+    background: $dark-bg-elevated !important;
+    border-top-color: $dark-border !important;
+  }
+
+  .ant-layout-content .chat-container .send-hint {
+    color: $dark-text-tertiary !important;
+  }
+
+  .ant-layout-content .chat-container .messages-wrapper {
+    color: $dark-text;
+  }
+
+  .ant-layout-content .chat-container .bubble-avatar.assistant {
+    color: #667eea;
+    background: linear-gradient(135deg, rgb(102 126 234 / 25%), rgb(118 75 162 / 25%));
+  }
+
+  /* ant-design-x-vue 在对话详情页内的深色适配（兼容 ax- / ant- 前缀） */
+  .ant-layout-content .chat-container [class*="welcome"],
+  .ant-layout-content .chat-container [class*="prompts"],
+  .ant-layout-content .chat-container [class*="sender"] {
+    color: $dark-text;
+  }
+
+  .ant-layout-content .chat-container [class*="welcome"] [class*="title"],
+  .ant-layout-content .chat-container [class*="welcome"] [class*="description"] {
+    color: $dark-text !important;
+  }
+
+  .ant-layout-content .chat-container [class*="prompts"] [class*="item"],
+  .ant-layout-content .chat-container [class*="prompts"] [class*="title"],
+  .ant-layout-content .chat-container .ant-x-prompts-item,
+  .ant-layout-content .chat-container [class*="prompts-item"] {
+    color: $dark-text !important;
+    background: $dark-bg-elevated !important;
+    border-color: $dark-border !important;
+  }
+
+  .ant-layout-content .chat-container [class*="sender"] textarea,
+  .ant-layout-content .chat-container [class*="sender"] input,
+  .ant-layout-content .chat-container .chat-send textarea,
+  .ant-layout-content .chat-container .chat-send input {
+    color: $dark-text !important;
+    background: $dark-bg !important;
+    border-color: $dark-border !important;
+
+    &::placeholder {
+      color: $dark-text-tertiary;
+    }
+  }
+
+  .ant-layout-content .chat-container [class*="conversations"] {
+    color: $dark-text;
+  }
+
+  .ant-layout-content .chat-container [class*="conversations"] [class*="item"],
+  .ant-layout-content .chat-container .sessions-list [class*="item"] {
+    color: $dark-text;
+    background: transparent;
+  }
+
+  .ant-layout-content .chat-container [class*="conversations"] [class*="item"][class*="active"],
+  .ant-layout-content .chat-container [class*="conversations"] [class*="item"]:hover,
+  .ant-layout-content .chat-container .sessions-list [class*="active"] {
+    background: rgb(255 255 255 / 6%);
+  }
+
+  /* 检索列表页 query/rag */
+  .ant-layout-content .query-container {
+    color: $dark-text;
+
+    .query-title {
+      color: $dark-text !important;
+    }
+
+    .query-question,
+    .query-meta .query-time {
+      color: $dark-text-secondary !important;
+    }
+  }
+
+  /* 知识库相关 */
+  .ant-layout-content .knowledge-container,
+  .ant-layout-content .query-container {
+    color: $dark-text;
+  }
+
+  .ant-layout-content .kb-card-selector,
+  .ant-layout-content .doc-tabs-card,
+  .ant-layout-content .config-card,
+  .ant-layout-content .kb-card {
+    color: $dark-text;
+    background: $dark-bg-elevated !important;
+    border-color: $dark-border !important;
+  }
+
+  .ant-layout-content .kb-name,
+  .ant-layout-content .kb-info .kb-name,
+  .ant-layout-content .step-title {
+    color: $dark-text !important;
+  }
+
+  .ant-layout-content .kb-desc,
+  .ant-layout-content .kb-info .kb-desc,
+  .ant-layout-content .kb-time,
+  .ant-layout-content .step-desc,
+  .ant-layout-content .config-desc {
+    color: $dark-text-secondary;
+  }
+
+  /* 卡片悬停（深色下略微提亮） */
+  .ant-layout-content .card-hover:hover,
+  .ant-layout-content .session-card:hover,
+  .ant-layout-content .query-card:hover,
+  .ant-layout-content .kb-card:hover {
+    box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+  }
+
+  /* 表单、输入框、选择器（内容区内） */
+  .ant-layout-content .ant-input,
+  .ant-layout-content .ant-input-affix-wrapper,
+  .ant-layout-content .ant-select-selector,
+  .ant-layout-content .ant-picker {
+    color: $dark-text !important;
+    background: $dark-bg-elevated !important;
+    border-color: $dark-border !important;
+
+    &::placeholder {
+      color: $dark-text-tertiary;
+    }
+
+    input {
+      color: $dark-text !important;
+      background: transparent !important;
+    }
+  }
+
+  .ant-layout-content .ant-form-item-label > label {
+    color: $dark-text !important;
+  }
+
+  /* 表格 */
+  .ant-layout-content .ant-table {
+    color: $dark-text;
+    background: $dark-bg-elevated !important;
+
+    .ant-table-thead > tr > th {
+      color: $dark-text !important;
+      background: $dark-bg !important;
+      border-color: $dark-border !important;
+    }
+
+    .ant-table-tbody > tr > td {
+      color: $dark-text;
+      border-color: $dark-border !important;
+    }
+
+    .ant-table-tbody > tr:hover > td {
+      background: rgb(255 255 255 / 4%) !important;
+    }
+  }
+
+  /* Tabs */
+  .ant-layout-content .ant-tabs {
+    color: $dark-text;
+
+    .ant-tabs-tab {
+      color: $dark-text-secondary;
+    }
+
+    .ant-tabs-tab-active .ant-tabs-tab-btn {
+      color: $dark-text !important;
+    }
+
+    .ant-tabs-ink-bar {
+      background: #0ea5e9;
+    }
+
+    .ant-tabs-nav::before {
+      border-color: $dark-border;
+    }
+  }
+
+  /* 默认按钮在内容区 */
+  .ant-layout-content .ant-btn-default {
+    color: $dark-text !important;
+    background: $dark-bg-elevated !important;
+    border-color: $dark-border !important;
+
+    &:hover {
+      color: #0ea5e9 !important;
+      border-color: #0ea5e9 !important;
+    }
+  }
+
+  /* 分页 */
+  .ant-layout-content .ant-pagination {
+    .ant-pagination-item {
+      background: $dark-bg-elevated !important;
+      border-color: $dark-border !important;
+
+      a {
+        color: $dark-text;
+      }
+
+      &.ant-pagination-item-active {
+        border-color: #0ea5e9 !important;
+
+        a {
+          color: #0ea5e9;
+        }
+      }
+    }
+
+    .ant-pagination-prev .ant-pagination-item-link,
+    .ant-layout-content .ant-pagination-next .ant-pagination-item-link {
+      color: $dark-text !important;
+      background: $dark-bg-elevated !important;
+      border-color: $dark-border !important;
+    }
+  }
+
+  /* 描述列表、统计等 */
+  .ant-layout-content .ant-descriptions-item-label,
+  .ant-layout-content .ant-descriptions-item-content {
+    color: $dark-text;
+    border-color: $dark-border !important;
+  }
+
+  /* 留白/占位文字 */
+  .ant-layout-content .ant-empty-description {
+    color: $dark-text-secondary;
+  }
+}
+
+/* 深色主题下的弹窗（Modal 挂载在 body，用 html.theme-dark 控制） */
+html.theme-dark {
+  .ant-modal-wrap {
+    .ant-modal {
+      .ant-modal-content {
+        background: $dark-bg-elevated !important;
+        border: 1px solid $dark-border;
+        box-shadow: 0 6px 16px rgb(0 0 0 / 50%);
+      }
+
+      .ant-modal-header {
+        color: $dark-text;
+        background: transparent !important;
+        border-bottom-color: $dark-border !important;
+
+        .ant-modal-title {
+          color: $dark-text !important;
+        }
+
+        .ant-modal-close {
+          color: $dark-text-secondary !important;
+          background: transparent !important;
+
+          &:hover {
+            color: $dark-text !important;
+          }
+        }
+      }
+
+      .ant-modal-body {
+        color: $dark-text;
+        background: transparent !important;
+        border-bottom-color: $dark-border !important;
+      }
+
+      .ant-modal-footer {
+        background: transparent !important;
+        border-top-color: $dark-border !important;
+
+        .ant-btn-default {
+          color: $dark-text !important;
+          background: $dark-bg-elevated !important;
+          border-color: $dark-border !important;
+
+          &:hover {
+            color: #0ea5e9 !important;
+            border-color: #0ea5e9 !important;
+          }
+        }
+      }
+
+      .ant-form-item-label > label {
+        color: $dark-text !important;
+      }
+
+      .ant-input,
+      .ant-input-affix-wrapper,
+      .ant-select-selector,
+      .ant-picker,
+      .ant-input-number,
+      textarea.ant-input {
+        color: $dark-text !important;
+        background: $dark-bg !important;
+        border-color: $dark-border !important;
+
+        &::placeholder {
+          color: $dark-text-tertiary;
+        }
+
+        input {
+          color: $dark-text !important;
+          background: transparent !important;
+        }
+      }
+
+      .ant-upload.ant-upload-drag {
+        background: $dark-bg !important;
+        border-color: $dark-border !important;
+
+        .ant-upload-drag-icon .anticon {
+          color: $dark-text-tertiary;
+        }
+
+        .ant-upload-text {
+          color: $dark-text-secondary;
+        }
+      }
+
+      .ant-switch-inner,
+      .ant-switch-handle::before {
+        background: $dark-bg-elevated;
+      }
+
+      .ant-checkbox-wrapper {
+        color: $dark-text;
+      }
+    }
+  }
+
+  /* 弹窗内下拉框、日期等浮层（同样挂载在 body） */
+  .ant-select-dropdown,
+  .ant-picker-dropdown {
+    background: $dark-bg-elevated !important;
+
+    .ant-select-item,
+    .ant-picker-panel-container {
+      color: $dark-text;
+    }
+
+    .ant-select-item-option-active,
+    .ant-select-item-option-selected {
+      color: $dark-text;
+      background: rgb(255 255 255 / 8%) !important;
+    }
+
+    .ant-picker-header,
+    .ant-picker-content th,
+    .ant-picker-cell {
+      color: $dark-text;
+    }
+
+    .ant-picker-cell:hover:not(.ant-picker-cell-selected) .ant-picker-cell-inner {
+      background: rgb(255 255 255 / 8%);
+    }
+  }
+}

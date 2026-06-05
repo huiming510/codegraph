@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR//DTD S2Container 2.4//EN"
+	"http://www.seasar.org/dtd/components24.dtd">
+<components>
+	<!-- アクションなどのアプリ用 -->
+	<component name="blowfish"
+			   class="r2framework.core.cryptography.Blowfish"
+			   instance="singleton">
+		<property name="key">"PR(LSY6RFGjak%;l"</property>
+		<property name="charset">"UTF-8"</property>
+	</component>
+
+	<!-- CookieSessionやR2TokenなどでCipherPoolを経由して使うインフラ用 -->
+	<component name="blowfishInfra"
+			   class="r2framework.core.cryptography.Blowfish"
+			   instance="prototype">
+		<property name="key">"RZNwO7ryk!F4_$ge"</property>
+	</component>
+
+    <component name="cipher"
+               class="r2framework.core.cryptography.CipherPool">
+               <property name="cipherName">"blowfishInfra"</property>
+    </component>
+</components>

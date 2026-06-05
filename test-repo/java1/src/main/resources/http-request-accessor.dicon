@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR//DTD S2Container 2.4//EN"
+    "http://www.seasar.org/dtd/components24.dtd">
+<components>
+
+    <!-- HTTPリクエストアクセッサー -->
+    <component name="JJHttpRequestAccessor"
+        class="jp.co.rct.jj.base.util.JJHttpRequestAccessor">
+        <initMethod name="addAllowedHeaderList">
+            <arg>"if-modified-since"</arg>
+        </initMethod>
+        <initMethod name="addAllowedCookieList">
+            <arg>"LotoCookie"</arg>
+        </initMethod>
+		<initMethod name="addAllowedCookieList">
+            <arg>"GalileoCookie"</arg>
+		</initMethod>
+    </component>
+
+</components>

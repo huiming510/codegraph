@@ -1,0 +1,38 @@
+.not-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+
+  .not-img {
+    width: 400px;
+  }
+
+  .not-detail {
+    display: flex;
+    flex-direction: column;
+
+    h2,
+    h4 {
+      padding: 0;
+      margin: 0;
+    }
+
+    h2 {
+      font-size: 60px;
+      color: rgb(0 0 0 / 88%);
+    }
+
+    h4 {
+      margin: 30px 0 20px;
+      font-size: 19px;
+      font-weight: normal;
+      color: rgb(0 0 0 / 65%);
+    }
+
+    .ant-btn {
+      width: 100px;
+    }
+  }
+}

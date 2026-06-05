@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j='http://jakarta.apache.org/log4j/'>
+
+    <!-- ログファイル 出力設定 -->
+    <!--
+        JJRollingFileAppender : ログファイルを日毎にローテーションしながら出力する
+          (設定項目)           (設定内容)
+        File           : ファイルのパスを設定
+        MaxBackupIndex : バックアップファイルの数を指定
+        Append         : 追加で出力が可能かどうか(デフォルト：false)
+        BufferedIO     : バッファリングするかどうか(デフォルト：false)
+        BufferSize     : バッファサイズの指定
+        Encoding       : ログ出力で使用するエンコーディングを指定
+        Threshold      : ログレベルの指定
+    -->
+    <appender name="FileLog" class="jp.co.rct.jj.base.util.JJRollingFileAppender">
+        <param name="File" value="$[CATALINA_BASE]/logs/unyo-tool.log" />
+        <param name="MaxBackupIndex" value="2"/>
+        <param name="Append" value="true" />
+        <param name="Encoding" value="UTF-8" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%-5p %d [%t] %c{1}:%L %m%n"/>
+        </layout>
+    </appender>
+
+    <!-- コンソールログ 出力設定 -->
+    <!--
+        PatternLayout書式
+        %c : カテゴリ名 %c{n}で表示するカテゴリ階層を指定
+        %d : 日付
+        %L : 行番号
+        %m : メッセージ
+        %n : 改行(ログメッセージの最後に挿入)
+        %p : 優先度（fatal/error/warn/info/debug）
+        %r : アプリケーション実行開始からの経過時間
+        %t : スレッド名
+    -->
+    <appender name="Console" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out"/>
+        <param name="ImmediateFlush" value="true"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%-5p %d [%t] %c{1}:%L %m%n"/>
+        </layout>
+    </appender>
+
+    <!-- 各種Loggerの設定 -->
+    <!--
+         ・ログ出力対象とするパッケージを追加したい場合、下記設定項目を追加する
+    -->
+    <logger name="r2framework.core.interceptor.ExecTimeInterceptor" additivity="false">
+        <level value="WARN" />
+        <appender-ref ref="FileLog"/>
+    </logger>
+
+    <logger name="PERFORMANCE" additivity="false">
+        <level value="INFO" />
+        <appender-ref ref="FileLog"/>
+    </logger>
+
+    <!--  運用ツールAction  -->
+    <logger name="jp.co.rct.jj.action" additivity="false">
+        <level value="INFO" />
+        <appender-ref ref="FileLog" />
+    </logger>
+
+    <!-- Root設定 -->
+    <root>
+        <level value="WARN" />
+        <appender-ref ref="FileLog"/>
+    </root>
+
+</log4j:configuration>

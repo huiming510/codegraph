@@ -1,0 +1,9 @@
+/dist/*
+.local
+/node_modules/**
+**/*.svg
+**/*.sh
+/public/*
+report.html
+.npmrc
+out/

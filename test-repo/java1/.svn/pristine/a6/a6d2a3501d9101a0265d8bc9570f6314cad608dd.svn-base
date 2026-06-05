@@ -1,0 +1,17 @@
+#
+#  build.properties.Inspection.sa
+#
+##################################
+#      Environment
+##################################
+unyo-tool.env.dbhome = /web/dbhome/jjsa
+
+##################################
+#      賃貸yaml取得API
+##################################
+unyo-tool.fr.yaml.api.url = https://wwwtst.sa.suumo.jp/unyo-tool/JJ901ABTEST003/
+
+##################################
+#      検品環境名
+##################################
+unyo-tool.env.kenpinname = S-A

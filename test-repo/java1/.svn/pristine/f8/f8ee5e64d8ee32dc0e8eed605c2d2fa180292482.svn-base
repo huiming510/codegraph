@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<taglib xmlns="http://java.sun.com/xml/ns/j2ee"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-jsptaglibrary_2_0.xsd"
+  version="2.0">
+	<description>
+		r2framework-ruiパッケージが提供するタグライブラリ
+	</description>
+	<display-name>r2framework-rui</display-name>
+	<tlib-version>1.0</tlib-version>
+	<short-name>rui</short-name>
+	<uri>http://r2framework.rui</uri>
+	<tag>
+		<description>
+			ページ送り機能用のタグ.
+		</description>
+		<name>pager</name>
+		<tag-class>r2framework.rui.taglib.PagerTag</tag-class>
+		<body-content>tagdependent</body-content>
+		<attribute>
+		  <description>
+		  出力するページ送り用のHTML要素を指定します.
+		  <![CDATA[
+			<br>
+			<li>first … 最初のページへのリンク</li>
+			<li>lastt … 最後のページへのリンク</li>
+			<li>previoust … 現在表示しているページの前のページへのリンク</li>
+			<li>nextt … 現在表示しているページの次のページへのリンク</li>
+			<li>pageLinkt … ページリンク</li>
+			<li>pageLinkPrevioust … ページリンクの最初のページの前のページへのリンク</li>
+			<li>pageLinkNextt … ページリンクの最初のページの次のページへのリンク</li>
+			<li>pageLinkFirstNumt … ページリンクの最初の番号</li>
+			<li>pageLinkLastNumt … ページリンクの最後の番号</li>
+			<li>currentPageNumt … 現在のページ番号</li>
+			<li>itemCountt … 検索結果の総件数</li>
+			<li>firstIndext … 現在表示している先頭の検索結果のインデックス</li>
+			<li>lastIndext … 現在表示している後尾の検索結果のインデックス</li>
+			<li>pageCountt … 全ページ数</li>
+			]]>
+		  </description>
+		  <name>type</name>
+		  <required>true</required>
+		  <rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+		  <description>
+		  ページリンクのセパレータを指定します。
+		  </description>
+		  <name>delim</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  リンクがなかったときのテキストの表示有無を指定します。
+		  <![CDATA[
+			<br>
+			<li>表示する … "true"</li>
+			<li>表示しない … "false"</li>
+		  ]]>
+		  </description>
+		  <name>disp</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  aタグを、class属性つきのliタグで囲みたい場合に指定します。
+		  class属性の値を記述します。
+		  </description>
+		  <name>litag</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  liタグまたはspanタグを付加し、現在表示しているページのclass属性を個別に指定したい場合に指定します。
+		  class属性の値を記述します。
+		  </description>
+		  <name>current</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  aタグにclass属性を追加する場合に指定します。
+		  class属性の値を記述します。
+		  </description>
+		  <name>atag</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  aタグを、class属性つきのspanタグで囲みたい場合に指定します。
+		  class属性の値を記述します。
+		  </description>
+		  <name>spantag</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  1ページしかなかったときのページャーの表示有無を指定します。
+		  <![CDATA[
+			<br>
+			<li>表示する … "true"</li>
+			<li>表示しない … "false"</li>
+		  ]]>
+		  </description>
+		  <name>pageDisp</name>
+		  <required>false</required>
+		</attribute>
+	</tag>
+	<tag>
+		<description>ページ送り用のタグ生成に必要な情報を取得します.</description>
+		<name>pageInfo</name>
+		<tag-class>r2framework.rui.taglib.PageInfoTag</tag-class>
+		<body-content>empty</body-content>
+		<attribute>
+		  <description>
+		  ページリンク生成に必要な各種の情報をRequestにsetAttributeします.
+		  </description>
+		  <name>paramName</name>
+		  <required>true</required>
+		</attribute>
+	</tag>
+	<tag>
+		<description>
+			段組み表示機能用のタグ.
+		</description>
+		<name>lattice</name>
+		<tag-class>r2framework.rui.taglib.LatticeTag</tag-class>
+		<body-content>empty</body-content>
+		<attribute>
+		  <description>
+		  段組み表示用のデータを指定します。
+		  </description>
+		  <name>list</name>
+		  <required>true</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  先頭のアンダースコアを除いたテンプレートファイル名を指定します。
+		  </description>
+		  <name>template</name>
+		  <required>true</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  段組み表示の列数を指定します。
+		  </description>
+		  <name>columNum</name>
+		  <required>true</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  <![CDATA[
+			段組み表示全体にかかるdivタグのclass属性値を指定します。
+			<br>
+			(未指定の場合、"table"になります)
+		  ]]>
+		  </description>
+		  <name>tableClass</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  <![CDATA[
+			行にかかるdivタグのclass属性値を指定します。
+			<br>
+			(未指定の場合、"row"になります)
+		  ]]>
+		  </description>
+		  <name>rowClass</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  <![CDATA[
+			最後以外の列にかかるdivタグのclass属性値を指定します。
+			<br>
+			(未指定の場合、"col"になります)
+		  ]]>
+		  </description>
+		  <name>colClass</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  <![CDATA[
+			最後の列にかかるdivタグのclass属性値を指定します。
+			<br>
+			(未指定の場合、"colLast"になります)
+		  ]]>
+		  </description>
+		  <name>colLastClass</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  ハイライトする要素にかかるdivタグのclass属性値を指定します。
+		  </description>
+		  <name>highlightClass</name>
+		  <required>false</required>
+		</attribute>
+		<attribute>
+		  <description>
+		  ハイライトするデータが設定されているactionクラスの変数命を指定します。
+		  </description>
+		  <name>targetItem</name>
+		  <required>false</required>
+		</attribute>
+	</tag>
+</taglib>
+

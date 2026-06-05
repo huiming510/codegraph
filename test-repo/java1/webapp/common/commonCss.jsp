@@ -1,0 +1,16 @@
+<%-- ＵＴＦ－８ --%><%@ page language="java" contentType="text/css; charset=UTF-8" pageEncoding="UTF-8"%><%--
+--%><%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%><%--
+--%><%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%><%--
+--%><%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %><%--
+--%><%@ taglib prefix="tiles" uri="http://jakarta.apache.org/struts/tags-tiles"%><%--
+--%><%@ taglib prefix="logic" uri="http://struts.apache.org/tags-logic"%><%--
+--%><%@ taglib prefix="s" uri="http://sastruts.seasar.org" %><%--
+--%><%@ taglib prefix="f" uri="http://sastruts.seasar.org/functions" %><%--
+--%><%@ taglib prefix="bean" uri="http://struts.apache.org/tags-bean" %><%--
+--%><%@ taglib prefix="html" uri="http://struts.apache.org/tags-html"%><%--
+--%><%@ taglib prefix="r2" uri="http://r.recruit.co.jp/r2tags-common" %><%--
+--%><%@ taglib prefix="r2logic" uri="http://r.recruit.co.jp/r2tags-logic" %><%--
+--%><%@ taglib prefix="rui" uri="http://r2framework.rui" %><%--
+--%><%@ taglib prefix="jj" uri="http://base.jj.rct.co.jp/" %><%--
+--%><%@ taglib prefix="heritage" uri="http://r.recruit.co.jp/jj/heritage" %><%--
+--%><jj:debugPrint />

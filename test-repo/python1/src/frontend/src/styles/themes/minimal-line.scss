@@ -1,0 +1,91 @@
+/**
+ * 风格 A：极简线框 - 白底、黑线、无渐变
+ * 侧边菜单 + 黑白线条为主
+ */
+.layout-container.theme-minimal-a {
+  --layout-bg: #ffffff;
+  --layout-header-bg: #ffffff;
+  --layout-header-border: 1px solid #1a1a1a;
+  --layout-sider-bg: #ffffff;
+  --layout-sider-border: 1px solid #1a1a1a;
+  --layout-content-bg: #ffffff;
+  --layout-border: #1a1a1a;
+  --text-primary: #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --menu-item-hover-bg: #f5f5f5;
+  --menu-item-selected-bg: #f0f0f0;
+  --menu-item-selected-border: 2px solid #1a1a1a;
+  --logo-title-color: #1a1a1a;
+  --scrollbar-thumb: #cccccc;
+  --scrollbar-track: #f5f5f5;
+}
+
+.theme-minimal-a {
+  .ant-layout-header {
+    background: var(--layout-header-bg) !important;
+    border-bottom: var(--layout-header-border) !important;
+    box-shadow: none !important;
+  }
+
+  .layout-header {
+    background: var(--layout-header-bg) !important;
+    border-bottom: var(--layout-header-border) !important;
+  }
+
+  .ant-layout-sider {
+    background: var(--layout-sider-bg) !important;
+  }
+
+  .ant-layout-sider-children {
+    border-inline-end: 1px solid var(--layout-border) !important;
+  }
+
+  .ant-layout-content {
+    background: var(--layout-content-bg) !important;
+  }
+
+  .ant-menu-item,
+  .ant-menu-submenu-title {
+    color: var(--text-primary) !important;
+  }
+
+  .ant-menu-item:hover,
+  .ant-menu-submenu-title:hover {
+    color: var(--text-primary) !important;
+    background: var(--menu-item-hover-bg) !important;
+  }
+
+  .ant-menu-item-selected {
+    color: var(--text-primary) !important;
+    background: var(--menu-item-selected-bg) !important;
+    border-left: var(--menu-item-selected-border);
+  }
+
+  .ant-menu-inline .ant-menu-item::after {
+    display: none;
+  }
+
+  .ant-menu-sub .ant-menu-item,
+  .ant-menu-sub .ant-menu-item .ant-menu-title-content {
+    color: var(--text-primary) !important;
+  }
+
+  .logo-area-title {
+    color: var(--logo-title-color) !important;
+    background: none !important;
+  }
+
+  .inner-page-card {
+    background: #ffffff;
+    border: 1px solid var(--layout-border);
+    box-shadow: none;
+  }
+
+  .ant-layout-content::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  .ant-layout-content::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+}

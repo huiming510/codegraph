@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR2.1//DTD S2Container//EN"
+	"http://www.seasar.org/dtd/components21.dtd">
+<components namespace="jdbc">
+	<include path="jta.dicon"/>
+	<component name="callTraceContext" class="jp.co.rct.jj.base.util.CallTraceContext" instance="singleton"/>
+</components>

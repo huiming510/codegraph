@@ -1,0 +1,66 @@
+---
+description: Backend 开发规约（FastAPI、路由、响应、认证）
+globs: src/backend/**/*
+alwaysApply: false
+---
+
+# Backend 开发规约
+
+本规则适用于 `src/backend` 下所有代码，保证与现有架构一致、AI 生成代码可即用。**代码注释**须符合本目录下 `code-comments.mdc`（文件/模块头、路由与公共函数 docstring、复杂逻辑说明；禁止废代码注释块与无信息量注释）。
+
+## 1. 目录与职责
+
+- **routers/**：按业务模块拆分（如 `knowledge_bases.py`、`documents.py`），每个文件一个 `APIRouter`，在 `main.py` 中 `include_router`。
+- **database/**：仅放模型与 CRUD，不在 router 里直接写 SQL；新表/新字段在 `models.py` 与 `crud.py` 中扩展。
+- **config.py**：所有环境相关配置用 Pydantic Settings，从 `.env` 或环境变量读取，不在代码里硬编码敏感信息。
+- **server/**：解析、ES、RAG 等“服务端逻辑”，由 `main.py` 的 lifespan 启动 worker；router 只做 HTTP 入参/出参与调用。
+
+## 2. 路由与响应格式
+
+- 所有对外 API 使用统一响应体：`{ "code": number, "data": any, "msg": string }`。
+- **成功**：必须使用 `from routers.common import success_response`，返回 `return success_response(data=...)`（不要手写 `{"code":0,...}`）。
+- **失败**：使用 `raise HTTPException(status_code=4xx/5xx, detail="msg")` 或 `detail={"msg": "..."}`；由 `main.py` 统一转成上述格式。
+- 路由前缀示例：`router = APIRouter(prefix="/api/knowledge-bases", tags=["知识库"])`，路径与前端 `api/modules` 中一致（前端 baseURL 已含 `/api`）。
+
+## 3. 认证与权限
+
+- 需要登录：`current_user = Depends(require_user)`。
+- 需要管理员：`current_user = Depends(require_admin)`。
+- 从 `routers.deps` 导入 `require_user`、`require_admin`、`get_current_user`，不要重复实现 JWT 解析。
+
+## 4. 数据库与异步
+
+- 使用异步：`AsyncSession`、`async def`；会话通过 `db: AsyncSession = Depends(get_db)` 注入。
+- 在 router 内只做“调用 crud + 返回 success_response”，复杂逻辑放在 `database/crud.py` 或 `server/` 中。
+
+## 5. 新增接口检查清单
+
+- [ ] 新 router 在 `main.py` 中 `include_router`。
+- [ ] 成功响应使用 `success_response(data=...)`。
+- [ ] 需要登录/管理员时使用 `Depends(require_user)` / `require_admin`。
+- [ ] 路径与前端约定一致（前缀、复数形式等）。
+- [ ] 不修改 `main.py` 中已有的异常处理、CORS、lifespan 结构。
+
+## 6. 示例（正确写法）
+
+```python
+# routers/xxx.py
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from database import get_db, crud
+from .common import success_response
+from .deps import require_user
+
+router = APIRouter(prefix="/api/xxx", tags=["XXX"])
+
+@router.get("")
+async def list_xxx(skip: int = 0, limit: int = 50, db: AsyncSession = Depends(get_db)):
+    items = await crud.list_xxx(db, skip=skip, limit=limit)
+    return success_response(data={"items": [...], "total": n})
+
+@router.post("")
+async def create_xxx(..., db: AsyncSession = Depends(get_db), current_user=Depends(require_user)):
+    one = await crud.create_xxx(db, ...)
+    await db.commit()
+    return success_response(data={"id": one.id})
+```

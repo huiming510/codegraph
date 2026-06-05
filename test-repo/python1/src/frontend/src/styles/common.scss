@@ -1,0 +1,68 @@
+/* has-sider-main */
+.has-sider-main {
+  padding: 10px;
+}
+
+/* inner-page-card */
+.inner-page-card {
+  box-sizing: border-box;
+  padding: 20px;
+  overflow-x: hidden;
+  background-color: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  box-shadow: 0 0 12px rgb(0 0 0 / 5%);
+
+  & + .inner-page-card {
+    margin-top: 10px;
+  }
+}
+
+/* fade-transform */
+.fade-transform-leave-active,
+.fade-transform-enter-active {
+  transition: all 0.2s;
+}
+
+.fade-transform-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: all 0.2s;
+}
+
+.fade-transform-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+  transition: all 0.2s;
+}
+
+/* scroll bar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #b3b3b3;
+  border-radius: 4px;
+}
+
+:focus-visible {
+  outline: none;
+}
+
+/* nprogress */
+#nprogress .bar {
+  background: #1677ff !important;
+}
+
+#nprogress .spinner-icon {
+  border-top-color: #1677ff !important;
+  border-left-color: #1677ff !important;
+}
+
+#nprogress .peg {
+  box-shadow:
+    0 0 10px #1677ff,
+    0 0 5px #1677ff !important;
+}

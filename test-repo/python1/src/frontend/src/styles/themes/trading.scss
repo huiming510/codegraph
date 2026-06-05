@@ -1,0 +1,148 @@
+/**
+ * 风格 C：交易平台风（参考 Blueberry Industry / 币安模拟器）
+ * 深色侧栏、浅色顶栏与内容区、蓝色强调
+ */
+.layout-container.theme-trading {
+  --layout-bg: #f0f2f5;
+  --layout-header-bg: #ffffff;
+  --layout-header-border: 1px solid #e8e8e8;
+  --layout-sider-bg: #0d1117;
+  --layout-sider-border: none;
+  --layout-content-bg: #f0f2f5;
+  --layout-border: #e8e8e8;
+  --text-primary: #1a1a1a;
+  --text-secondary: #595959;
+  --menu-item-hover-bg: rgb(255 255 255 / 8%);
+  --menu-item-selected-bg: rgb(14 165 233 / 15%);
+  --menu-item-selected-border: none;
+  --menu-item-selected-color: #0ea5e9;
+  --logo-title-color: #ffffff;
+  --sider-text-color: #e6edf3;
+  --sider-text-secondary: #8b949e;
+  --scrollbar-thumb: #484f58;
+  --scrollbar-track: #161b22;
+  --card-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+}
+
+.theme-trading {
+  background: var(--layout-bg) !important;
+
+  .ant-layout-header {
+    background: var(--layout-header-bg) !important;
+    border-bottom: var(--layout-header-border) !important;
+    box-shadow: 0 1px 0 0 rgb(0 0 0 / 6%);
+  }
+
+  .layout-header {
+    background: var(--layout-header-bg) !important;
+    border-bottom: var(--layout-header-border) !important;
+  }
+
+  .ant-layout-sider {
+    background: var(--layout-sider-bg) !important;
+
+    &::after {
+      display: none;
+    }
+  }
+
+  .ant-layout-sider-children {
+    border-inline-end: none !important;
+  }
+
+  .ant-layout-content {
+    background: var(--layout-content-bg) !important;
+  }
+
+  /* 侧栏 logo 区域 */
+  .sider-logo {
+    border-bottom: 1px solid rgb(255 255 255 / 10%);
+  }
+
+  .sider-logo-title {
+    color: var(--logo-title-color) !important;
+  }
+
+  /* 顶栏在 trading 主题下保持浅色 */
+  .minimal-header,
+  .header-minimal {
+    background: var(--layout-header-bg) !important;
+    border-bottom: var(--layout-header-border) !important;
+  }
+
+  /* 侧栏菜单：深色底、浅色字、蓝色选中 */
+  .ant-menu {
+    color: var(--sider-text-color) !important;
+    background: transparent !important;
+  }
+
+  .ant-menu-item,
+  .ant-menu-submenu-title {
+    color: var(--sider-text-color) !important;
+  }
+
+  .ant-menu-item:hover,
+  .ant-menu-submenu-title:hover {
+    color: #ffffff !important;
+    background: var(--menu-item-hover-bg) !important;
+  }
+
+  .ant-menu-item-selected {
+    color: var(--menu-item-selected-color) !important;
+    background: var(--menu-item-selected-bg) !important;
+    border-left: none;
+  }
+
+  .ant-menu-submenu-open > .ant-menu-submenu-title {
+    color: var(--menu-item-selected-color) !important;
+  }
+
+  .ant-menu-inline .ant-menu-item::after {
+    display: none;
+  }
+
+  .ant-menu-sub .ant-menu-item {
+    color: var(--sider-text-secondary) !important;
+  }
+
+  .ant-menu-sub .ant-menu-item:hover,
+  .ant-menu-sub .ant-menu-item.ant-menu-item-selected {
+    color: var(--menu-item-selected-color) !important;
+  }
+
+  .ant-menu-sub .ant-menu-item.ant-menu-item-selected {
+    background: var(--menu-item-selected-bg) !important;
+  }
+
+  .ant-menu-title-content {
+    color: inherit !important;
+  }
+
+  .logo-area-title {
+    color: var(--logo-title-color) !important;
+    background: none !important;
+  }
+
+  .inner-page-card {
+    background: #ffffff;
+    border: 1px solid var(--layout-border);
+    box-shadow: var(--card-shadow);
+  }
+
+  .ant-layout-content::-webkit-scrollbar-track {
+    background: #f0f0f0;
+  }
+
+  .ant-layout-content::-webkit-scrollbar-thumb {
+    background: #bfbfbf;
+  }
+
+  /* 侧栏折叠按钮 */
+  .sidebar-collapse .collapse-icon {
+    color: var(--sider-text-secondary);
+  }
+
+  .sidebar-collapse {
+    border-top: 1px solid rgb(255 255 255 / 10%);
+  }
+}

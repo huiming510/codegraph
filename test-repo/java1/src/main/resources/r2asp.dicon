@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR//DTD S2Container 2.4//EN" "http://www.seasar.org/dtd/components24.dtd">
+<components>
+  <!-- 自己署名証明書でExceptionを出力しない場合設定 -->
+  <component name="easySSLProtocolSocketFactory" class="r2framework.asp.ssl.EasySSLProtocolSocketFactory"/>
+  <component name="sslprotocol" class="org.apache.commons.httpclient.protocol.Protocol">
+          <arg>"https"</arg> <!-- scheme -->
+          <arg>container.easySSLProtocolSocketFactory</arg> <!-- SecureProtocolSocketFactory -->
+          <arg>443</arg> <!-- defaultPort -->
+  </component>
+  <component name="httpClientConfig" class="r2framework.asp.config.HttpClientConfigImpl">
+      <!--必要あれば設定…
+      <property name="maxConnectionsPerHost">32</property>
+      <property name="maxTotalConnections">128</property>
+      <property name="proxyHost">"rainbow.r.recruit.co.jp"</property>
+      <property name="proxyPort">8080</property>
+      <property name="additionalHttpParameters">
+          #{"key1" : "value1", "key2" : "value2", "key3" : "value3"}
+      </property>
+      <property name="userName">"admin"</property>
+      <property name="password">"AdminPasswd"</property>
+      <property name="realm">"MyRealm"</property>
+      <property name="userAgent">"Mozilla/5.0 (Windows; U; Windows NT 5.1; ja; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3"</property>
+      <property name="timeoutMillis">0</property>
+      <property name="disableKeepAlive">false</property>
+      <property name="contentType">"application/x-www-form-urlencoded; charset=utf-8"</property>
+      <property name="additionalRequestHeaders">
+          #{"key1" : "value1", "key2" : "value2", "key3" : "value3"}
+      </property>
+      -->
+      <!-- 自己署名証明書でExceptionを出力しない場合設定 -->
+      <initMethod name="addProtocol">
+              <arg>"https"</arg>
+              <arg>container.sslprotocol</arg>
+      </initMethod>
+  </component>
+  <component name="aspManager" class="r2framework.asp.manager.AspManager">
+      <property name="aspClient">
+          <component class="r2framework.asp.impl.FailOverAspClientImpl">
+              <property name="sender">
+                  <component name="sender" class="r2framework.asp.HttpSender">
+                      <property name="config">
+                          httpClientConfig
+                      </property>
+                  </component>
+              </property>
+              <property name="errorHandler">
+                  <component class="jp.co.rct.jj.base.asp.JJDefaultErrorHandler"/>
+              </property>
+              <!-- 必要なら設定
+              <property name="retryCount">1</property>
+              <property name="interval">400</property>
+              <initMethod name="addUrl"><arg>"http://localhost:8181/"</arg></initMethod>
+              <initMethod name="addUrl"><arg>"http://localhost:8182/"</arg></initMethod>
+              <initMethod name="addUrl"><arg>"http://localhost:8185/"</arg></initMethod>
+              -->
+          </component>
+      </property>
+      <property name="defaultResultHandler">
+          <component class="r2framework.asp.resulthandler.StringResultHandler"/>
+      </property>
+  </component>
+
+    <!-- ↓ABテスト ASP定義↓ -->
+    <component name="yamlApihttpClientConfig" class="r2framework.asp.config.HttpClientConfigImpl" instance="prototype">
+        <property name="socketTimeoutMillis">5000</property>
+        <property name="connectionTimeoutMillis">5000</property>
+        <property name="disableKeepAlive">false</property>
+        <property name="userName">"ajtgjm"</property>
+        <property name="password">"258456"</property>
+        <property name="contentType">"application/x-www-form-urlencoded; charset=utf-8"</property>
+    </component>
+    <component name="yamlApiAspManager" class="r2framework.asp.manager.AspManager" instance="prototype">
+        <property name="aspClient">
+            <component class="r2framework.asp.impl.FailOverAspClientImpl">
+                <property name="sender">
+                    <component name="sender" class="r2framework.asp.HttpSender">
+                        <property name="config">yamlApihttpClientConfig</property>
+                    </component>
+                </property>
+                <property name="errorHandler">
+                    <component class="jp.co.rct.jj.base.asp.JJDefaultErrorHandler"/>
+                </property>
+                <property name="retryCount">1</property>
+                <property name="interval">0</property>
+            </component>
+        </property>
+        <property name="defaultResultHandler">
+            <component class="r2framework.asp.resulthandler.StringResultHandler"/>
+        </property>
+    </component>
+    <!-- ↑ABテスト ASP定義↑ -->
+
+</components>

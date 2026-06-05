@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR//DTD S2Container 2.4//EN"
+	"http://www.seasar.org/dtd/components24.dtd">
+<components>
+        <!-- 使用するモジュールを指定 -->
+        <component name="sophos"
+                           class="r2framework.core.helper.impl.SophosAPICheckHelper"
+                           instance="singleton">
+                <!-- ウィルスソフトがあるホストを指定 -->
+                <property name="host">"172.19.3.142"</property>
+
+                <!-- ウィルスソフトがあるポートを指定 -->
+                <property name="port">4010</property>
+
+                <!-- 接続タイムアウト -->
+                <property name="timeout">100000</property>
+
+                <!-- SAVI オプション -->
+                <property name="savists">
+                        #{"zipdecompression":"1"}
+                </property>
+
+                <!-- レポートタイプリスト -->
+                <property name="reportTypeList">
+                        {"file", "virus", "error"}
+                </property>
+
+                <!-- レスポンス出力形式（固定）-->
+                <property name="output">"brief"</property>
+
+        </component>
+
+</components>

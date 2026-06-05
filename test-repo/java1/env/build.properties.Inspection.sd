@@ -1,0 +1,12 @@
+#
+#  build.properties.Inspection.sd
+#
+##################################
+#      Environment
+##################################
+unyo-tool.env.dbhome = /web/dbhome/jjsd
+
+##################################
+#      検品環境名
+##################################
+unyo-tool.env.kenpinname = S-D

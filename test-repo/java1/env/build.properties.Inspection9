@@ -1,0 +1,12 @@
+#
+#  build.properties.Inspection9
+#
+##################################
+#      Environment
+##################################
+unyo-tool.env.dbhome = /web/dbhome/jj9
+
+##################################
+#      検品環境名
+##################################
+unyo-tool.env.kenpinname = K-9

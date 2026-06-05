@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>CodeGraph Viewer (5stage)</title>
+<script src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Segoe UI", sans-serif; background: #1a1a2e; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
+#toolbar {
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+  background: #16213e; border-bottom: 1px solid #0f3460; flex-wrap: wrap;
+}
+#toolbar h1 { font-size: 15px; color: #4fc3f7; white-space: nowrap; }
+#search { padding: 5px 10px; border-radius: 6px; border: 1px solid #0f3460; background: #0d1b2a; color: #e0e0e0; width: 220px; font-size: 13px; }
+#search:focus { outline: none; border-color: #4fc3f7; }
+.filter-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.filter-group label { font-size: 12px; color: #90caf9; }
+.chip { padding: 3px 9px; border-radius: 12px; font-size: 11px; cursor: pointer; border: 1px solid transparent; transition: opacity .15s; }
+.chip.off { opacity: .3; }
+#layout-btn, #fit-btn { padding: 5px 11px; border-radius: 6px; border: 1px solid #0f3460; background: #0d1b2a; color: #90caf9; cursor: pointer; font-size: 12px; }
+#layout-btn:hover, #fit-btn:hover { background: #0f3460; }
+#main { display: flex; flex: 1; overflow: hidden; }
+#graph { flex: 1; min-width: 0; }
+#panel { width: 300px; min-width: 150px; max-width: 600px; background: #16213e; border-left: 1px solid #0f3460; overflow-y: auto; padding: 14px; font-size: 12px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+#panel h2 { font-size: 13px; }
+.info-row { display: flex; gap: 6px; flex-wrap: wrap; line-height: 1.5; }
+.info-label { color: #90caf9; flex-shrink: 0; }
+.info-val { word-break: break-all; }
+.edge-list { display: flex; flex-direction: column; gap: 4px; }
+.edge-item { background: #0d1b2a; border-radius: 5px; padding: 5px 8px; border-left: 3px solid #555; cursor: pointer; font-size: 11px; }
+.edge-item:hover { background: #0f3460; }
+.edge-item .et { font-size: 10px; color: #80cbc4; }
+.edge-item .peer { color: #ffe082; }
+.empty { color: #666; font-size: 12px; }
+#stats { font-size: 11px; color: #777; white-space: nowrap; }
+
+/* Resize handle */
+.resize-handle {
+  width: 5px; flex-shrink: 0; cursor: col-resize; background: transparent;
+  border-left: 1px solid #0f3460; transition: background .15s; z-index: 10;
+}
+.resize-handle:hover, .resize-handle.dragging { background: #4fc3f7; border-color: #4fc3f7; }
+
+/* Left sidebar: tree + src stacked */
+#left-sidebar {
+  display: flex; flex-direction: column; flex-shrink: 0;
+  width: 580px; min-width: 200px; max-width: 900px;
+  background: #0a1628; border-right: 1px solid #0f3460; overflow: hidden;
+}
+
+/* File tree panel */
+#tree-panel {
+  flex-shrink: 0; height: 280px; min-height: 80px;
+  background: #0a1628; border-bottom: 1px solid #0f3460;
+  display: flex; flex-direction: column; font-size: 12px;
+}
+#tree-header {
+  padding: 8px 10px; background: #16213e; border-bottom: 1px solid #0f3460;
+  font-size: 11px; color: #90caf9; display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
+}
+#tree-search {
+  margin: 6px 8px; padding: 4px 8px; border-radius: 5px;
+  border: 1px solid #0f3460; background: #0d1b2a; color: #e0e0e0;
+  font-size: 11px; width: calc(100% - 16px); flex-shrink: 0;
+}
+#tree-search:focus { outline: none; border-color: #4fc3f7; }
+#tree-body { flex: 1; overflow-y: auto; }
+.tree-dir {
+  padding: 3px 8px 3px 6px; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 4px; color: #90caf9; font-size: 11px;
+}
+.tree-dir:hover { background: #132040; }
+.tree-dir .arrow { font-size: 9px; transition: transform .15s; display: inline-block; width: 10px; }
+.tree-dir.open .arrow { transform: rotate(90deg); }
+.tree-file {
+  padding: 3px 8px 3px 18px; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 4px; font-size: 11px; color: #bbb;
+}
+.tree-file:hover { background: #132040; color: #e0e0e0; }
+.tree-file.active { background: #0f3460 !important; color: #4fc3f7 !important; }
+.tree-node-item {
+  padding: 2px 8px 2px 28px; cursor: pointer; font-size: 10px; color: #888;
+  display: flex; align-items: center; gap: 4px;
+}
+.tree-node-item:hover { background: #132040; color: #e0e0e0; }
+.tree-node-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.tree-children { display: none; }
+.tree-children.open { display: block; }
+
+/* Vertical resize handle between tree and src */
+#vsplit-handle {
+  height: 5px; flex-shrink: 0; cursor: row-resize; background: transparent;
+  border-top: 1px solid #0f3460; transition: background .15s;
+}
+#vsplit-handle:hover, #vsplit-handle.dragging { background: #4fc3f7; border-color: #4fc3f7; }
+
+/* Source viewer panel */
+#src-panel {
+  flex: 1; min-height: 80px; background: #0d1b2a;
+  display: flex; flex-direction: column; font-size: 12px;
+}
+#src-header {
+  padding: 8px 10px; background: #16213e; border-bottom: 1px solid #0f3460;
+  font-size: 11px; color: #90caf9; word-break: break-all; min-height: 36px;
+  display: flex; align-items: center; gap: 6px;
+}
+#src-header .src-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#src-body { flex: 1; overflow-y: auto; padding: 0; }
+.src-line {
+  display: flex; align-items: flex-start; cursor: pointer;
+  border-left: 3px solid transparent; transition: background .1s;
+}
+.src-line:hover { background: #132040; }
+.src-line.has-node { border-left-color: #1565c0; }
+.src-line.active-line { background: #0f3460 !important; border-left-color: #4fc3f7 !important; }
+.src-line.selected-node-line { background: #1a3a1a !important; border-left-color: #66bb6a !important; }
+.src-line .ln {
+  width: 38px; padding: 2px 6px 2px 4px; text-align: right;
+  color: #444; font-size: 10px; font-family: monospace; flex-shrink: 0;
+  user-select: none; line-height: 1.6;
+}
+.src-line.has-node .ln { color: #4fc3f7; }
+.src-line .lc {
+  padding: 2px 6px 2px 0; font-family: monospace; font-size: 11px;
+  line-height: 1.6; color: #bbb; word-break: break-all; flex: 1;
+}
+.src-line.has-node .lc { color: #e0e0e0; }
+.src-node-tags {
+  padding: 1px 6px 3px 42px; display: flex; flex-wrap: wrap; gap: 3px;
+}
+.src-node-tag {
+  padding: 1px 6px; border-radius: 10px; font-size: 10px; cursor: pointer;
+  border: 1px solid transparent; transition: opacity .1s;
+}
+.src-node-tag:hover { opacity: .8; filter: brightness(1.3); }
+.src-empty { color: #555; font-size: 12px; padding: 20px 14px; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <h1>&#128202; CodeGraph Viewer (5stage)</h1>
+  <input id="search" type="text" placeholder="搜索节点…" />
+  <div class="filter-group"><label>节点:</label><div id="nf"></div></div>
+  <div class="filter-group"><label>边:</label><div id="ef"></div></div>
+  <button id="fit-btn">&#8982; 全适</button>
+  <button id="layout-btn">&#8635; 重布局</button>
+  <span id="stats"></span>
+</div>
+<div id="main">
+  <div id="left-sidebar">
+    <div id="tree-panel">
+      <div id="tree-header">&#128193; 项目目录树</div>
+      <input id="tree-search" type="text" placeholder="过滤文件…" />
+      <div id="tree-body"></div>
+    </div>
+    <div id="vsplit-handle"></div>
+    <div id="src-panel">
+      <div id="src-header"><span class="src-title" style="color:#555">源码阅读器 — 选中节点后显示</span></div>
+      <div id="src-body"><div class="src-empty">选中图中节点，此处将显示对应源文件结构</div></div>
+    </div>
+  </div>
+  <div class="resize-handle" id="left-resize"></div>
+  <div id="graph"></div>
+  <div class="resize-handle" id="right-resize"></div>
+  <div id="panel"><div class="empty">点击节点查看详情</div></div>
+</div>
+<script>
+const NODE_COLORS = {
+  class:         {bg:'#1565c0',border:'#42a5f5',font:'#e3f2fd'},
+  method:        {bg:'#1b5e20',border:'#66bb6a',font:'#e8f5e9'},
+  field:         {bg:'#004d40',border:'#4db6ac',font:'#e0f2f1'},
+  parameter:     {bg:'#0d47a1',border:'#64b5f6',font:'#e3f2fd'},
+  file:          {bg:'#37474f',border:'#90a4ae',font:'#eceff1'},
+  external:      {bg:'#3e2723',border:'#a1887f',font:'#efebe9'},
+
+  // Code symbol types
+  function:      {bg:'#1a237e',border:'#7986cb',font:'#e8eaf6'},
+  module:        {bg:'#004d40',border:'#4db6ac',font:'#e0f2f1'},
+  variable:      {bg:'#880e4f',border:'#f06292',font:'#fce4ec'},
+
+  // JSP / template node kinds
+  jsp_page:          {bg:'#4a148c',border:'#ab47bc',font:'#f3e5f5'},
+  jsp_tag_def:       {bg:'#880e4f',border:'#f06292',font:'#fce4ec'},
+  jsp_include:       {bg:'#01579b',border:'#4fc3f7',font:'#e1f5fe'},
+  jsp_form:          {bg:'#e65100',border:'#ff9800',font:'#fff3e0'},
+  jsp_form_submit:   {bg:'#bf360c',border:'#ff7043',font:'#fbe9e7'},
+  jsp_struts_tag:    {bg:'#1b5e20',border:'#81c784',font:'#e8f5e9'},
+  jsp_struts_action: {bg:'#33691e',border:'#aed581',font:'#f1f8e9'},
+  jsp_struts_forward:{bg:'#558b2f',border:'#c5e1a5',font:'#f9fbe7'},
+  jsp_logic:         {bg:'#006064',border:'#4dd0e1',font:'#e0f7fa'},
+  jsp_bean:          {bg:'#004d40',border:'#4db6ac',font:'#e0f2f1'},
+  jsp_custom_tag:    {bg:'#6a1b9a',border:'#ba68c8',font:'#f3e5f5'},
+  jsp_taglib:        {bg:'#1565c0',border:'#64b5f6',font:'#e3f2fd'},
+
+  // Servlet / filter
+  servlet_def:       {bg:'#0d47a1',border:'#64b5f6',font:'#e3f2fd'},
+  filter_def:        {bg:'#0277bd',border:'#4fc3f7',font:'#e1f5fe'},
+  servlet_pattern:   {bg:'#01579b',border:'#81d4fa',font:'#e1f5fe'},
+  servlet_bound:     {bg:'#00838f',border:'#4dd0e1',font:'#e0f7fa'},
+  filter_chain:      {bg:'#00695c',border:'#80cbc4',font:'#e0f2f1'},
+  context_param:     {bg:'#37474f',border:'#90a4ae',font:'#eceff1'},
+
+  // Struts
+  struts_route:      {bg:'#1b5e20',border:'#66bb6a',font:'#e8f5e9'},
+  struts_formbean:   {bg:'#e65100',border:'#ff9800',font:'#fff3e0'},
+  struts_global_forward:{bg:'#33691e',border:'#aed581',font:'#f1f8e9'},
+
+  // Config / external
+  config_file:       {bg:'#455a64',border:'#90a4ae',font:'#eceff1'},
+  jsp_entry:         {bg:'#ff6f00',border:'#ffca28',font:'#fff8e1'},
+
+  DEFAULT:       {bg:'#263238',border:'#78909c',font:'#eceff1'},
+};
+const EDGE_COLORS = {
+  defined_in:    '#78909c',
+  contains:      '#78909c',
+  call:          '#66bb6a',
+  extends:       '#ce93d8',
+  implements:    '#ba68c8',
+  instantiates:  '#ffb74d',
+  reads:         '#4fc3f7',
+  writes:        '#ef9a9a',
+  typed_as:      '#80cbc4',
+  bound_to:      '#ffcc80',
+
+  // Template / UI edges
+  includes:         '#4fc3f7',
+  template_include: '#4fc3f7',
+  template_extends: '#ab47bc',
+  template_defines: '#ba68c8',
+  template_to_symbol: '#ce93d8',
+  form_bound:      '#ff9800',
+  action_route:    '#66bb6a',
+  forward_route:   '#aed581',
+  servlet_bound:    '#4dd0e1',
+  filter_chain:    '#80cbc4',
+  di_bound:        '#ffcc80',
+
+  // Cross-file edges (rendering)
+  renders:        '#ff6f00',
+
+  // Cross-file edge types
+  jsp_java_render:     '#ff9800',
+  jsp_java_form:       '#ff7043',
+  jsp_java_action:     '#ffa726',
+  jsp_include:         '#4fc3f7',
+  jsp_custom_tag:     '#ab47bc',
+  react_ts_interface:  '#61dafb',
+  vue_ts_component:    '#42b883',
+  template_to_code:    '#e91e63',
+  config_to_component: '#ffc107',
+  config_to_route:     '#ffeb3b',
+  config_to_service:   '#cddc39',
+  webxml_to_servlet:  '#2196f3',
+  webxml_to_filter:    '#03a9f4',
+  struts_action_forward: '#8bc34a',
+  spring_route:       '#6db33f',
+  config_bean:        '#ffc107',
+  tld_tag:            '#9e9e9e',
+  dicon_component:    '#795548',
+
+  // Generic cross-file marker
+  cross_file:     '#ff9800',
+
+  DEFAULT:       '#78909c',
+};
+
+const RAW_NODES = [{"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "label": "gradle-wrapper.properties", "end": null, "lang": "properties", "type": "config_file", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "source_location": ""}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#0", "label": "distributionBase", "end": [1, 0], "lang": "properties", "attrs": {"value": "GRADLE_USER_HOME", "path": "distributionBase", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "raw_value": "GRADLE_USER_HOME", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "source_location": "L1"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#1", "label": "distributionPath", "end": [2, 0], "lang": "properties", "attrs": {"value": "wrapper/dists", "path": "distributionPath", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "raw_value": "wrapper/dists", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "source_location": "L2"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#2", "label": "distributionUrl", "end": [3, 0], "lang": "properties", "attrs": {"value": "https\\://services.gradle.org/distributions/gradle-7.4-bin.zip", "path": "distributionUrl", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "raw_value": "https\\://services.gradle.org/distributions/gradle-7.4-bin.zip", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "source_location": "L3"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#3", "label": "zipStoreBase", "end": [4, 0], "lang": "properties", "attrs": {"value": "GRADLE_USER_HOME", "path": "zipStoreBase", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "raw_value": "GRADLE_USER_HOME", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "source_location": "L4"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#4", "label": "zipStorePath", "end": [5, 0], "lang": "properties", "attrs": {"value": "wrapper/dists", "path": "zipStorePath", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "raw_value": "wrapper/dists", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "source_location": "L5"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application-test.properties", "label": "application-test.properties", "end": null, "lang": "properties", "type": "config_file", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application-test.properties", "source_location": ""}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application-test.properties#string#0", "label": "spring.datasource.url", "end": [1, 0], "lang": "properties", "attrs": {"value": "jdbc:sqlite::memory:", "path": "spring.datasource.url", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application-test.properties", "raw_value": "jdbc:sqlite::memory:", "metadata": {"source": "properties", "ref": {"path": "spring.datasource.url", "target": "jdbc:sqlite::memory:", "target_type": "jdbc_url", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application-test.properties", "line": 1, "confidence": "high", "format": "jdbc_connection"}}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application-test.properties", "source_location": "L1"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "label": "application.properties", "end": null, "lang": "properties", "type": "config_file", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": ""}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#0", "label": "spring.datasource.url", "end": [1, 0], "lang": "properties", "attrs": {"value": "jdbc:sqlite:dev.db", "path": "spring.datasource.url", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "jdbc:sqlite:dev.db", "metadata": {"source": "properties", "ref": {"path": "spring.datasource.url", "target": "jdbc:sqlite:dev.db", "target_type": "jdbc_url", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "line": 1, "confidence": "high", "format": "jdbc_connection"}}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L1"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#1", "label": "spring.datasource.driver-class-name", "end": [2, 0], "lang": "properties", "attrs": {"value": "org.sqlite.JDBC", "path": "spring.datasource.driver-class-name", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "org.sqlite.JDBC", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L2"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#2", "label": "spring.datasource.username", "end": [3, 0], "lang": "properties", "attrs": {"value": "", "path": "spring.datasource.username", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L3"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#3", "label": "spring.datasource.password", "end": [4, 0], "lang": "properties", "attrs": {"value": "", "path": "spring.datasource.password", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L4"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#boolean#4", "label": "spring.jackson.deserialization.UNWRAP_ROOT_VALUE", "end": [5, 0], "lang": "properties", "attrs": {"value": "true", "path": "spring.jackson.deserialization.UNWRAP_ROOT_VALUE", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "true", "metadata": {"source": "properties"}}, "type": "boolean", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L5"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#5", "label": "image.default", "end": [7, 0], "lang": "properties", "attrs": {"value": "https://static.productionready.io/images/smiley-cyrus.jpg", "path": "image.default", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "https://static.productionready.io/images/smiley-cyrus.jpg", "metadata": {"source": "properties", "ref": {"path": "image.default", "target": "https://static.productionready.io/images/smiley-cyrus.jpg", "target_type": "url", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "line": 7, "confidence": "high", "format": "url"}}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L7"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#6", "label": "jwt.secret", "end": [9, 0], "lang": "properties", "attrs": {"value": "nRvyYC4soFxBdZ-F-5Nnzz5USXstR1YylsTd-mA0aKtI9HUlriGrtkf-TiuDapkLiUCogO3JOK7kwZisrHp6wA", "path": "jwt.secret", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "nRvyYC4soFxBdZ-F-5Nnzz5USXstR1YylsTd-mA0aKtI9HUlriGrtkf-TiuDapkLiUCogO3JOK7kwZisrHp6wA", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L9"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#integer#7", "label": "jwt.sessionTime", "end": [10, 0], "lang": "properties", "attrs": {"value": "86400", "path": "jwt.sessionTime", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "86400", "metadata": {"source": "properties"}}, "type": "integer", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L10"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#boolean#8", "label": "mybatis.configuration.cache-enabled", "end": [12, 0], "lang": "properties", "attrs": {"value": "true", "path": "mybatis.configuration.cache-enabled", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "true", "metadata": {"source": "properties"}}, "type": "boolean", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L12"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#integer#9", "label": "mybatis.configuration.default-statement-timeout", "end": [13, 0], "lang": "properties", "attrs": {"value": "3000", "path": "mybatis.configuration.default-statement-timeout", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "3000", "metadata": {"source": "properties"}}, "type": "integer", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L13"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#boolean#10", "label": "mybatis.configuration.map-underscore-to-camel-case", "end": [14, 0], "lang": "properties", "attrs": {"value": "true", "path": "mybatis.configuration.map-underscore-to-camel-case", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "true", "metadata": {"source": "properties"}}, "type": "boolean", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L14"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#boolean#11", "label": "mybatis.configuration.use-generated-keys", "end": [15, 0], "lang": "properties", "attrs": {"value": "true", "path": "mybatis.configuration.use-generated-keys", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "true", "metadata": {"source": "properties"}}, "type": "boolean", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L15"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#12", "label": "mybatis.type-handlers-package", "end": [16, 0], "lang": "properties", "attrs": {"value": "io.spring.infrastructure.mybatis", "path": "mybatis.type-handlers-package", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "io.spring.infrastructure.mybatis", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L16"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#13", "label": "mybatis.mapper-locations", "end": [17, 0], "lang": "properties", "attrs": {"value": "mapper/*.xml", "path": "mybatis.mapper-locations", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "mapper/*.xml", "metadata": {"source": "properties", "ref": {"path": "mybatis.mapper-locations", "target": "mapper/*.xml", "target_type": "file_ref", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "line": 17, "confidence": "medium", "format": "file_path"}}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L17"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#14", "label": "logging.level.io.spring.infrastructure.mybatis.readservice.ArticleReadService", "end": [19, 0], "lang": "properties", "attrs": {"value": "DEBUG", "path": "logging.level.io.spring.infrastructure.mybatis.readservice.ArticleReadService", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "DEBUG", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L19"}, {"id": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#15", "label": "logging.level.io.spring.infrastructure.mybatis.mapper", "end": [20, 0], "lang": "properties", "attrs": {"value": "DEBUG", "path": "logging.level.io.spring.infrastructure.mybatis.mapper", "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "raw_value": "DEBUG", "metadata": {"source": "properties"}}, "type": "string", "source_file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "source_location": "L20"}];
+const RAW_EDGES = [{"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#0", "type": "contains", "evidence": "L1"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#1", "type": "contains", "evidence": "L2"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#2", "type": "contains", "evidence": "L3"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#3", "type": "contains", "evidence": "L4"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\gradle\\wrapper\\gradle-wrapper.properties#string#4", "type": "contains", "evidence": "L5"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application-test.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application-test.properties#string#0", "type": "contains", "evidence": "L1"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#0", "type": "contains", "evidence": "L1"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#1", "type": "contains", "evidence": "L2"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#2", "type": "contains", "evidence": "L3"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#3", "type": "contains", "evidence": "L4"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#boolean#4", "type": "contains", "evidence": "L5"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#5", "type": "contains", "evidence": "L7"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#6", "type": "contains", "evidence": "L9"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#integer#7", "type": "contains", "evidence": "L10"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#boolean#8", "type": "contains", "evidence": "L12"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#integer#9", "type": "contains", "evidence": "L13"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#boolean#10", "type": "contains", "evidence": "L14"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#boolean#11", "type": "contains", "evidence": "L15"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#12", "type": "contains", "evidence": "L16"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#13", "type": "contains", "evidence": "L17"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#14", "type": "contains", "evidence": "L19"}, {"source": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties", "target": "config::D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\application.properties#string#15", "type": "contains", "evidence": "L20"}];
+
+const nodeMap = {};
+RAW_NODES.forEach(n => nodeMap[n.id] = n);
+
+const allNodeTypes = [...new Set(RAW_NODES.map(n => n.type))].sort();
+const allEdgeTypes = [...new Set(RAW_EDGES.map(e => e.type))].sort();
+const activeNodes = new Set(allNodeTypes);
+const activeEdges = new Set(allEdgeTypes);
+
+let visNodes, visEdges, network;
+const expandHistory = [];
+const posCache = {};
+
+const nodeById = {};
+RAW_NODES.forEach(n => nodeById[n.id] = n);
+
+// Build file → line → [nodeIds] index for source viewer
+const fileLineIndex = {};
+RAW_NODES.forEach(n => {
+  if (!n.source_file || !n.source_location) return;
+  const f = n.source_file.replace(/\\/g, '/');
+  const m = n.source_location.match(/^L(\d+)/);
+  if (!m) return;
+  const ln = parseInt(m[1], 10);
+  if (!fileLineIndex[f]) fileLineIndex[f] = {};
+  if (!fileLineIndex[f][ln]) fileLineIndex[f][ln] = [];
+  fileLineIndex[f][ln].push(n.id);
+});
+
+// Collect all unique files and their max line numbers
+const fileMaxLine = {};
+RAW_NODES.forEach(n => {
+  if (!n.source_file || !n.source_location) return;
+  const f = n.source_file.replace(/\\/g, '/');
+  const m = n.source_location.match(/^L(\d+)/);
+  if (!m) return;
+  const ln = parseInt(m[1], 10);
+  if (!fileMaxLine[f] || ln > fileMaxLine[f]) fileMaxLine[f] = ln;
+});
+
+function nc(type) {
+  const c = NODE_COLORS[type] || NODE_COLORS.DEFAULT;
+  return {background:c.bg, border:c.border, highlight:{background:c.border,border:'#fff'}, hover:{background:c.border,border:'#fff'}};
+}
+function ec(type) { return {color:EDGE_COLORS[type]||EDGE_COLORS.DEFAULT, highlight:'#fff', hover:EDGE_COLORS[type]||EDGE_COLORS.DEFAULT}; }
+
+function shortLabel(n) { const l = n.label||n.id; return l.length>26?l.slice(0,24)+'…':l; }
+
+function flushPos() {
+  Object.assign(posCache, network.getPositions());
+}
+
+function neighborsOf(ids) {
+  const vis = new Set(ids);
+  RAW_EDGES.forEach(e => {
+    if (!activeEdges.has(e.type)) return;
+    if (ids.has(e.source)) vis.add(e.target);
+    if (ids.has(e.target)) vis.add(e.source);
+  });
+  return vis;
+}
+
+function makeNodeVis(n) {
+  const typeHint = n.type_hint ? ' : ' + n.type_hint : '';
+  const annotations = n.annotations && n.annotations.length ? ' @' + n.annotations.join(' @') : '';
+  const extra = typeHint + annotations;
+  return {
+    id:n.id, label:shortLabel(n),
+    title:n.type+': '+n.label+extra+'\n'+(n.source_file||''),
+    color:nc(n.type),
+    font:{color:(NODE_COLORS[n.type]||NODE_COLORS.DEFAULT).font, size:11},
+    shape: n.type==='method'?'ellipse':n.type==='parameter'?'ellipse':'box',
+  };
+}
+
+function buildData() {
+  const q = document.getElementById('search').value.toLowerCase();
+  let vis;
+  if (expandHistory.length > 0) {
+    const raw = expandHistory[expandHistory.length - 1].visSet;
+    vis = new Set([...raw].filter(id => { const n = nodeById[id]; return n && activeNodes.has(n.type); }));
+  } else if (q !== '') {
+    const matched = new Set(RAW_NODES
+      .filter(n => activeNodes.has(n.type) &&
+        (n.label.toLowerCase().includes(q) || n.id.toLowerCase().includes(q)))
+      .map(n => n.id));
+    vis = neighborsOf(matched);
+  } else {
+    vis = new Set(RAW_NODES.filter(n => activeNodes.has(n.type)).map(n => n.id));
+  }
+  const fn = [...vis].map(id => nodeById[id]).filter(Boolean);
+  const fe = RAW_EDGES.filter(e => activeEdges.has(e.type) && vis.has(e.source) && vis.has(e.target));
+  return {
+    nodes: fn.map(makeNodeVis),
+    edges: fe.map((e,i)=>({
+      id:i, from:e.source, to:e.target,
+      label:e.type.replace(/_/g,' '),
+      title:e.type+(e.evidence?'\n'+e.evidence:''),
+      color:ec(e.type),
+      font:{size:9,color:'#999',strokeWidth:0,align:'middle'},
+      arrows:{to:{enabled:true,scaleFactor:0.6}},
+      width:1.5,
+      smooth:{type:'curvedCW',roundness:0.15},
+      _raw:e,
+    })),
+  };
+}
+
+function expandNode(id) {
+  const visSet = neighborsOf(new Set([id]));
+  flushPos();
+  expandHistory.push({nodeId: id, visSet});
+  const d = buildData();
+  const existingIds = new Set(visNodes.getIds());
+  const toAdd = d.nodes.filter(n => !existingIds.has(n.id));
+  visNodes.add(toAdd);
+  const center = posCache[id] || {x:0, y:0};
+  let newIdx = 0;
+  toAdd.forEach(n => {
+    if (posCache[n.id]) {
+      network.moveNode(n.id, posCache[n.id].x, posCache[n.id].y);
+    } else {
+      const angle = (2 * Math.PI * newIdx) / Math.max(toAdd.length, 1);
+      network.moveNode(n.id, center.x + 160*Math.cos(angle), center.y + 160*Math.sin(angle));
+      newIdx++;
+    }
+  });
+  existingIds.forEach(nid => {
+    if (visSet.has(nid) && posCache[nid]) network.moveNode(nid, posCache[nid].x, posCache[nid].y);
+  });
+  const toRemove = visNodes.getIds().filter(nid => !visSet.has(nid));
+  visNodes.remove(toRemove);
+  visEdges.clear();
+  visEdges.add(d.edges);
+  document.getElementById('stats').textContent =
+    '节点 '+d.nodes.length+'/'+RAW_NODES.length+'  边 '+d.edges.length+'/'+RAW_EDGES.length;
+}
+
+function refresh() {
+  flushPos();
+  const d = buildData();
+  const existingIds = new Set(visNodes.getIds());
+  const nextIds = new Set(d.nodes.map(n=>n.id));
+  visNodes.remove([...existingIds].filter(id=>!nextIds.has(id)));
+  const toAdd = d.nodes.filter(n=>!existingIds.has(n.id));
+  visNodes.add(toAdd);
+  visEdges.clear(); visEdges.add(d.edges);
+  d.nodes.forEach(n => {
+    if (posCache[n.id]) network.moveNode(n.id, posCache[n.id].x, posCache[n.id].y);
+  });
+  document.getElementById('stats').textContent =
+    '节点 '+d.nodes.length+'/'+RAW_NODES.length+'  边 '+d.edges.length+'/'+RAW_EDGES.length;
+}
+
+function renderFilters() {
+  const nf = document.getElementById('nf');
+  allNodeTypes.forEach(t => {
+    const c = NODE_COLORS[t]||NODE_COLORS.DEFAULT;
+    const chip = document.createElement('span');
+    chip.className = 'chip'; chip.textContent = t;
+    chip.style.cssText = 'background:'+c.bg+';border-color:'+c.border+';color:'+c.font;
+    chip.onclick = () => { activeNodes.has(t)?activeNodes.delete(t):activeNodes.add(t); chip.classList.toggle('off'); refresh(); };
+    nf.appendChild(chip);
+  });
+  const ef = document.getElementById('ef');
+  allEdgeTypes.forEach(t => {
+    const clr = EDGE_COLORS[t]||'#78909c';
+    const chip = document.createElement('span');
+    chip.className = 'chip'; chip.textContent = t.replace(/_/g,' ');
+    chip.style.cssText = 'background:#1a1a2e;border-color:'+clr+';color:'+clr;
+    chip.onclick = () => { activeEdges.has(t)?activeEdges.delete(t):activeEdges.add(t); chip.classList.toggle('off'); refresh(); };
+    ef.appendChild(chip);
+  });
+}
+
+// ---- Source Viewer ----
+
+let currentSrcFile = null;
+let currentSrcNodeId = null;
+
+function renderSourceViewer(node) {
+  if (!node || !node.source_file) {
+    document.getElementById('src-header').innerHTML =
+      '<span class="src-title" style="color:#555">源码阅读器 — 选中节点后显示</span>';
+    document.getElementById('src-body').innerHTML =
+      '<div class="src-empty">选中图中节点，此处将显示对应源文件结构</div>';
+    currentSrcFile = null;
+    currentSrcNodeId = null;
+    return;
+  }
+
+  const filePath = node.source_file.replace(/\\/g, '/');
+  const targetLine = node.source_location ? parseInt(node.source_location.match(/\d+/)[0], 10) : null;
+  const lineIndex = fileLineIndex[filePath] || {};
+  const maxLine = fileMaxLine[filePath] || 0;
+  const prevFile = currentSrcFile;
+
+  currentSrcFile = filePath;
+  currentSrcNodeId = node.id;
+
+  // Update header
+  const shortPath = filePath.split('/').slice(-2).join('/');
+  document.getElementById('src-header').innerHTML =
+    '<span title="'+filePath+'" class="src-title">&#128196; '+shortPath+'</span>';
+
+  // Only rebuild DOM if file changed
+  const body = document.getElementById('src-body');
+  if (prevFile !== filePath) {
+    body.innerHTML = '';
+    const allLines = Object.keys(lineIndex).map(Number).sort((a,b)=>a-b);
+    if (!allLines.length) {
+      body.innerHTML = '<div class="src-empty">该文件无节点位置信息</div>';
+      return;
+    }
+
+    // Render lines: show all lines that have nodes, plus ±2 context lines
+    const lineSet = new Set();
+    allLines.forEach(ln => {
+      for (let i = Math.max(1, ln-2); i <= ln+2; i++) lineSet.add(i);
+    });
+    const lineNums = [...lineSet].sort((a,b)=>a-b);
+
+    let prevLn = null;
+    lineNums.forEach(ln => {
+      if (prevLn !== null && ln > prevLn + 1) {
+        const gap = document.createElement('div');
+        gap.style.cssText = 'padding:2px 4px 2px 42px;color:#333;font-size:10px;font-family:monospace';
+        gap.textContent = '···';
+        body.appendChild(gap);
+      }
+      prevLn = ln;
+
+      const nodeIds = lineIndex[ln] || [];
+      const hasNode = nodeIds.length > 0;
+
+      const row = document.createElement('div');
+      row.className = 'src-line' + (hasNode ? ' has-node' : '');
+      row.dataset.line = ln;
+      row.innerHTML =
+        '<span class="ln">'+ln+'</span>' +
+        '<span class="lc">'+(hasNode ? nodeIds.map(id=>nodeById[id]?nodeById[id].label:'?').join(', ') : '')+'</span>';
+
+      if (hasNode) {
+        const tags = document.createElement('div');
+        tags.className = 'src-node-tags';
+        nodeIds.forEach(nid => {
+          const nd = nodeById[nid];
+          if (!nd) return;
+          const c = NODE_COLORS[nd.type] || NODE_COLORS.DEFAULT;
+          const tag = document.createElement('span');
+          tag.className = 'src-node-tag';
+          tag.style.cssText = 'background:'+c.bg+';border-color:'+c.border+';color:'+c.font;
+          tag.textContent = nd.type+': '+nd.label;
+          tag.title = nd.id;
+          tag.onclick = (ev) => { ev.stopPropagation(); focusNode(nid); };
+          tags.appendChild(tag);
+        });
+        row.onclick = () => { focusNode(nodeIds[0]); };
+        const wrap = document.createElement('div');
+        wrap.dataset.line = ln;
+        wrap.appendChild(row);
+        wrap.appendChild(tags);
+        body.appendChild(wrap);
+      } else {
+        body.appendChild(row);
+      }
+    });
+  }
+
+  // Highlight the active node's line
+  body.querySelectorAll('.src-line').forEach(el => {
+    el.classList.remove('active-line', 'selected-node-line');
+  });
+  if (targetLine !== null) {
+    const allLineEls = body.querySelectorAll('[data-line]');
+    let targetEl = null;
+    allLineEls.forEach(el => {
+      if (parseInt(el.dataset.line, 10) === targetLine) targetEl = el;
+    });
+    if (targetEl) {
+      const lineEl = targetEl.classList.contains('src-line') ? targetEl : targetEl.querySelector('.src-line');
+      if (lineEl) lineEl.classList.add('selected-node-line');
+      targetEl.scrollIntoView({block:'center', behavior: prevFile !== filePath ? 'auto' : 'smooth'});
+    }
+  }
+}
+
+// ---- File Tree ----
+
+const fileTreeData = (() => {
+  const root = {};
+  const fileNodes = {};
+  RAW_NODES.forEach(n => {
+    if (!n.source_file) return;
+    const f = n.source_file.replace(/\\/g, '/');
+    if (!fileNodes[f]) fileNodes[f] = [];
+    fileNodes[f].push(n.id);
+  });
+  Object.keys(fileNodes).forEach(fp => {
+    const parts = fp.split('/');
+    let cur = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const seg = parts[i];
+      if (!cur[seg]) cur[seg] = { __files: [] };
+      cur = cur[seg];
+    }
+    const fname = parts[parts.length - 1];
+    cur.__files = cur.__files || [];
+    cur.__files.push({ name: fname, path: fp, nodeIds: fileNodes[fp] });
+  });
+  return { tree: root, fileNodes };
+})();
+
+let activeTreeFile = null;
+
+function renderTreeNode(container, tree, depth, filterText) {
+  const dirKeys = Object.keys(tree).filter(k => k !== '__files').sort();
+  const files = (tree.__files || []).filter(f =>
+    !filterText || f.name.toLowerCase().includes(filterText) || f.path.toLowerCase().includes(filterText)
+  );
+
+  dirKeys.forEach(dk => {
+    const hasMatch = filterText ? hasTreeMatch(tree[dk], filterText) : true;
+    if (!hasMatch) return;
+
+    const dirEl = document.createElement('div');
+    dirEl.className = 'tree-dir open';
+    dirEl.style.paddingLeft = (6 + depth * 12) + 'px';
+    dirEl.innerHTML = '<span class="arrow">&#9654;</span>&#128193; ' + dk;
+
+    const childEl = document.createElement('div');
+    childEl.className = 'tree-children open';
+
+    dirEl.onclick = (ev) => {
+      ev.stopPropagation();
+      dirEl.classList.toggle('open');
+      childEl.classList.toggle('open');
+    };
+
+    renderTreeNode(childEl, tree[dk], depth + 1, filterText);
+    container.appendChild(dirEl);
+    container.appendChild(childEl);
+  });
+
+  files.forEach(f => {
+    const fileEl = document.createElement('div');
+    fileEl.className = 'tree-file' + (f.path === activeTreeFile ? ' active' : '');
+    fileEl.style.paddingLeft = (18 + depth * 12) + 'px';
+    fileEl.dataset.path = f.path;
+    fileEl.innerHTML = '&#128196; ' + f.name;
+    fileEl.title = f.path;
+
+    const nodesEl = document.createElement('div');
+    nodesEl.className = 'tree-children';
+
+    const sortedIds = f.nodeIds.slice().sort((a, b) => {
+      const na = nodeById[a], nb = nodeById[b];
+      const la = na && na.source_location ? parseInt(na.source_location.match(/\d+/)[0], 10) : 0;
+      const lb = nb && nb.source_location ? parseInt(nb.source_location.match(/\d+/)[0], 10) : 0;
+      return la - lb;
+    });
+
+    sortedIds.forEach(nid => {
+      const nd = nodeById[nid];
+      if (!nd) return;
+      const c = NODE_COLORS[nd.type] || NODE_COLORS.DEFAULT;
+      const ni = document.createElement('div');
+      ni.className = 'tree-node-item';
+      ni.style.paddingLeft = (28 + depth * 12) + 'px';
+      ni.innerHTML =
+        '<span class="tree-node-dot" style="background:' + c.border + '"></span>' +
+        '<span style="color:' + c.border + '">' + nd.type + '</span> ' + nd.label;
+      ni.title = nd.id;
+      ni.onclick = (ev) => { ev.stopPropagation(); focusNode(nid); };
+      nodesEl.appendChild(ni);
+    });
+
+    fileEl.onclick = (ev) => {
+      ev.stopPropagation();
+      nodesEl.classList.toggle('open');
+      setActiveTreeFile(f.path, f.nodeIds[0]);
+    };
+
+    container.appendChild(fileEl);
+    container.appendChild(nodesEl);
+  });
+}
+
+function hasTreeMatch(tree, filterText) {
+  const files = tree.__files || [];
+  if (files.some(f => f.name.toLowerCase().includes(filterText) || f.path.toLowerCase().includes(filterText))) return true;
+  return Object.keys(tree).filter(k => k !== '__files').some(dk => hasTreeMatch(tree[dk], filterText));
+}
+
+function setActiveTreeFile(filePath, nodeId) {
+  activeTreeFile = filePath;
+  document.querySelectorAll('.tree-file').forEach(el => {
+    el.classList.toggle('active', el.dataset.path === filePath);
+  });
+  if (nodeId) {
+    const nd = nodeById[nodeId];
+    if (nd) renderSourceViewer(nd);
+  }
+}
+
+function renderFileTree(filterText) {
+  const body = document.getElementById('tree-body');
+  body.innerHTML = '';
+  renderTreeNode(body, fileTreeData.tree, 0, filterText ? filterText.toLowerCase() : '');
+}
+
+function highlightTreeFile(filePath) {
+  if (!filePath) return;
+  const normPath = filePath.replace(/\\/g, '/');
+  activeTreeFile = normPath;
+  document.querySelectorAll('.tree-file').forEach(el => {
+    el.classList.toggle('active', el.dataset.path === normPath);
+    if (el.dataset.path === normPath) {
+      let p = el.parentElement;
+      while (p && p.id !== 'tree-body') {
+        if (p.classList.contains('tree-children')) p.classList.add('open');
+        if (p.previousElementSibling && p.previousElementSibling.classList.contains('tree-dir')) {
+          p.previousElementSibling.classList.add('open');
+        }
+        p = p.parentElement;
+      }
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  });
+}
+
+window.onload = () => {
+  renderFilters();
+  renderFileTree('');
+  document.getElementById('tree-search').addEventListener('input', e => renderFileTree(e.target.value));
+  const d = buildData();
+  visNodes = new vis.DataSet(d.nodes);
+  visEdges = new vis.DataSet(d.edges);
+  network = new vis.Network(document.getElementById('graph'),
+    {nodes:visNodes, edges:visEdges},
+    {
+      physics:{barnesHut:{gravitationalConstant:-8000,springLength:120,springConstant:0.04},stabilization:{iterations:250}},
+      interaction:{hover:true,tooltipDelay:80,keyboard:true},
+      layout:{improvedLayout:false},
+    }
+  );
+  network.on('stabilizationIterationsDone', () => network.setOptions({physics:{enabled:false}}));
+  network.on('dragEnd', flushPos);
+  document.getElementById('stats').textContent = '节点 '+d.nodes.length+'/'+RAW_NODES.length+'  边 '+d.edges.length+'/'+RAW_EDGES.length;
+
+  let pendingSelectId = null;
+
+  network.on('selectNode', params => {
+    if (!params.nodes.length) return;
+    const id = params.nodes[0];
+    pendingSelectId = id;
+    const node = nodeById[id];
+    if (node) {
+      renderPanel(node,
+        RAW_EDGES.filter(e=>e.source===id&&activeEdges.has(e.type)),
+        RAW_EDGES.filter(e=>e.target===id&&activeEdges.has(e.type))
+      );
+      renderSourceViewer(node);
+      highlightTreeFile(node.source_file);
+    }
+  });
+  network.on('deselectNode', () => {
+    if (pendingSelectId !== null) {
+      pendingSelectId = null;
+      return;
+    }
+    document.getElementById('panel').innerHTML='<div class="empty">点击节点查看详情</div>';
+  });
+
+  function stepBack() {
+    if (expandHistory.length > 0) {
+      expandHistory.pop();
+      if (expandHistory.length > 0) {
+        flushPos();
+        const d = buildData();
+        const existingIds = new Set(visNodes.getIds());
+        const nextIds = new Set(d.nodes.map(n => n.id));
+        visNodes.remove([...existingIds].filter(id => !nextIds.has(id)));
+        const toAdd = d.nodes.filter(n => !existingIds.has(n.id));
+        visNodes.add(toAdd);
+        visEdges.clear(); visEdges.add(d.edges);
+        d.nodes.forEach(n => { if (posCache[n.id]) network.moveNode(n.id, posCache[n.id].x, posCache[n.id].y); });
+        document.getElementById('stats').textContent =
+          '节点 '+d.nodes.length+'/'+RAW_NODES.length+'  边 '+d.edges.length+'/'+RAW_EDGES.length;
+      } else {
+        refresh();
+      }
+      document.getElementById('panel').innerHTML='<div class="empty">点击节点查看详情</div>';
+    }
+  }
+
+  network.on('click', params => {
+    if (!params.nodes.length && !params.edges.length) {
+      stepBack();
+    }
+  });
+  network.on('doubleClick', params => {
+    if (!params.nodes.length) return;
+    const id = params.nodes[0];
+    expandNode(id);
+    const node = nodeById[id];
+    if (node) {
+      renderPanel(node,
+        RAW_EDGES.filter(e=>e.source===id&&activeEdges.has(e.type)),
+        RAW_EDGES.filter(e=>e.target===id&&activeEdges.has(e.type))
+      );
+      renderSourceViewer(node);
+    }
+  });
+  document.getElementById('fit-btn').onclick = () => network.fit({animation:true});
+  document.getElementById('layout-btn').onclick = () => {
+    network.setOptions({physics:{enabled:true}});
+    network.stabilize(200);
+    network.once('stabilizationIterationsDone', ()=>network.setOptions({physics:{enabled:false}}));
+  };
+  document.getElementById('search').addEventListener('input', refresh);
+
+  // Drag-resize: left sidebar width
+  (function() {
+    const handle = document.getElementById('left-resize');
+    const sidebar = document.getElementById('left-sidebar');
+    let dragging = false, startX, startW;
+    handle.addEventListener('mousedown', e => {
+      dragging = true; startX = e.clientX; startW = sidebar.offsetWidth;
+      handle.classList.add('dragging'); e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      sidebar.style.width = Math.max(200, Math.min(900, startW + (e.clientX - startX))) + 'px';
+    });
+    document.addEventListener('mouseup', () => { dragging = false; handle.classList.remove('dragging'); });
+  })();
+
+  // Drag-resize: right panel width
+  (function() {
+    const handle = document.getElementById('right-resize');
+    const panel = document.getElementById('panel');
+    let dragging = false, startX, startW;
+    handle.addEventListener('mousedown', e => {
+      dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+      handle.classList.add('dragging'); e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      panel.style.width = Math.max(150, Math.min(600, startW - (e.clientX - startX))) + 'px';
+    });
+    document.addEventListener('mouseup', () => { dragging = false; handle.classList.remove('dragging'); });
+  })();
+
+  // Drag-resize: vertical split between tree and src panels
+  (function() {
+    const handle = document.getElementById('vsplit-handle');
+    const treePanel = document.getElementById('tree-panel');
+    let dragging = false, startY, startH;
+    handle.addEventListener('mousedown', e => {
+      dragging = true; startY = e.clientY; startH = treePanel.offsetHeight;
+      handle.classList.add('dragging'); e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      treePanel.style.height = Math.max(80, Math.min(700, startH + (e.clientY - startY))) + 'px';
+    });
+    document.addEventListener('mouseup', () => { dragging = false; handle.classList.remove('dragging'); });
+  })();
+};
+
+function renderPanel(node, out, inc) {
+  const c = NODE_COLORS[node.type]||NODE_COLORS.DEFAULT;
+  let h = '<h2 style="color:'+c.border+'">&#9679; '+node.label+'</h2>';
+  h += '<div class="info-row"><span class="info-label">类型:</span><span class="info-val">'+node.type+'</span></div>';
+  h += '<div class="info-row"><span class="info-label">ID:</span><span class="info-val" style="font-size:10px">'+node.id+'</span></div>';
+  if (node.type_hint) h += '<div class="info-row"><span class="info-label">返回:</span><span class="info-val" style="font-size:10px">'+node.type_hint+'</span></div>';
+  if (node.scope && node.scope !== '<global>') h += '<div class="info-row"><span class="info-label">作用域:</span><span class="info-val">'+node.scope+'</span></div>';
+  if (node.modifiers && node.modifiers.length) h += '<div class="info-row"><span class="info-label">修饰:</span><span class="info-val">'+node.modifiers.join(' ')+'</span></div>';
+  if (node.annotations && node.annotations.length) h += '<div class="info-row"><span class="info-label">注解:</span><span class="info-val">'+node.annotations.join(' ')+'</span></div>';
+  if (node.control_flow) h += '<div class="info-row"><span class="info-label">控制流:</span><span class="info-val">'+node.control_flow+'</span></div>';
+  if (node.source_file) h += '<div class="info-row"><span class="info-label">文件:</span><span class="info-val" style="font-size:10px">'+node.source_file+'</span></div>';
+  if (node.source_location) h += '<div class="info-row"><span class="info-label">位置:</span><span class="info-val">'+node.source_location+'</span></div>';
+
+  function edgeSec(title, list, isOut) {
+    if (!list.length) return '';
+    let s = '<div style="margin-top:8px"><div style="color:#90caf9;margin-bottom:4px">'+title+' ('+list.length+')</div><div class="edge-list">';
+    list.forEach(e => {
+      const pid = isOut?e.target:e.source;
+      const pl = nodeMap[pid]?nodeMap[pid].label:pid;
+      const clr = EDGE_COLORS[e.type]||'#78909c';
+      s += '<div class="edge-item" style="border-left-color:'+clr+'" onclick="focusNode(\''+pid+'\')">';
+      s += '<div class="et">'+e.type+'</div><div class="peer">'+pl+'</div>';
+      if (e.evidence) s += '<div style="color:#aaa;font-size:10px">'+e.evidence+'</div>';
+      s += '</div>';
+    });
+    return s + '</div></div>';
+  }
+  h += edgeSec('&#8594; 出边', out, true);
+  h += edgeSec('&#8592; 入边', inc, false);
+  document.getElementById('panel').innerHTML = h;
+}
+
+function focusNode(id) {
+  expandNode(id);
+  network.focus(id, {scale:1.2,animation:true});
+  network.selectNodes([id]);
+  const node = nodeById[id] || nodeMap[id];
+  if (!node) return;
+  renderPanel(node,
+    RAW_EDGES.filter(e=>e.source===id&&activeEdges.has(e.type)),
+    RAW_EDGES.filter(e=>e.target===id&&activeEdges.has(e.type))
+  );
+  renderSourceViewer(node);
+  highlightTreeFile(node.source_file);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+---
+description: 项目范围与开发目录约定（仅 backend + frontend）
+alwaysApply: true
+---
+
+# 项目开发范围
+
+- **本系统开发目录仅有两处**：`src/backend`（后端）、`src/frontend`（前端）。AI 生成或修改业务代码时，只在这两个目录下增删改。
+- **其他目录**（如 `src/preprocess`、`src/index`、`src/llm`、`src/pipeline` 等）为仓库既有能力或依赖，不随意调整结构或删除；若需调用，仅通过 backend 的 `server/` 或已有入口引用。
+- **文档**：框架说明与接口约定见 `docs/开发框架说明.md`、`docs/接口契约.md`；开发规约见本目录下 `backend-conventions.mdc`、`frontend-conventions.mdc`；**代码注释规则**见 `code-comments.mdc`（便于业务 check，防止垃圾代码堆叠）。
+- **前后端约定**：接口统一前缀 `/api`，响应体统一 `{ code, data, msg }`；成功时 `code` 为 0 或 200，前端使用 `data`。

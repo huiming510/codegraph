@@ -1,0 +1,16 @@
+diff --git a/node_modules/ant-design-x-vue/es/conversations/ConversationsItem.mjs b/node_modules/ant-design-x-vue/es/conversations/ConversationsItem.mjs
+index 7245467..bca1ee2 100644
+--- a/node_modules/ant-design-x-vue/es/conversations/ConversationsItem.mjs
++++ b/node_modules/ant-design-x-vue/es/conversations/ConversationsItem.mjs
+@@ -88,8 +88,9 @@ const j = /* @__PURE__ */ h({
+         class: `${e.prefixCls}-label`,
+         ellipsis: {
+           onEllipsis: v
+-        }
+-      }, {
++        },
++        content: typeof e.info.label === "string" ? e.info.label : void 0
++      }, typeof e.info.label === "string" ? null : {
+         default: () => [e.info.label]
+       }), !o.value && e.menu && n(N, {
+         placement: e.direction === "rtl" ? "bottomLeft" : "bottomRight",

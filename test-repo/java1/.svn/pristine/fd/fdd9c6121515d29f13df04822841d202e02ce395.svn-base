@@ -1,0 +1,12 @@
+#
+#  build.properties.Inspection.sb
+#
+##################################
+#      Environment
+##################################
+unyo-tool.env.dbhome = /web/dbhome/jjsb
+
+##################################
+#      検品環境名
+##################################
+unyo-tool.env.kenpinname = S-B

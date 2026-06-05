@@ -1,0 +1,12 @@
+#
+#  build.properties.Inspection2
+#
+##################################
+#      Environment
+##################################
+unyo-tool.env.dbhome = /web/dbhome/jj2
+
+##################################
+#      検品環境名
+##################################
+unyo-tool.env.kenpinname = K-2

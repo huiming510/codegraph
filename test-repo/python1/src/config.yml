@@ -1,0 +1,31 @@
+version: v1.1.0
+llm:
+  -
+    model: Qwen3-30B-A3B-Instruct-2507
+    base_url: http://192.168.10.187:5004/v1
+    api_key: EMPTY
+    max_model_len: 262144
+    thinking: false
+  -
+    model: Qwen3-30B-A3B-Thinking-2507
+    base_url: http://192.168.10.187:5001/v1
+    api_key: EMPTY
+    max_model_len: 262144
+    thinking: true
+
+embedding:
+  model: Qwen3-Embedding-0.6B
+  base_url: http://192.168.10.187:5002/v1/embeddings
+  api_key: EMPTY
+  support_matryoshka: false
+  dimensions: 1024
+
+reranker:
+  model: Qwen3-Reranker-0.6B
+  base_url: http://192.168.10.187:5002/v1/rerank
+  api_key: EMPTY
+  llm_arch: true # Qwen3 Reranker模型为causal llm架构，bge为bert架构
+
+elasticsearch:
+  url: http://elastic:+ZWNahlRPSAwNj2g5Upr@192.168.10.187:9200
+

@@ -1,0 +1,428 @@
+<?xml version="1.0"?>
+
+<!--
+    * Copyright 2004-2006 the Seasar Foundation and the Others.
+    *
+    * Licensed under the Apache License, Version 2.0 (the "License");
+    * you may not use this file except in compliance with the License.
+    * You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    * Unless required by applicable law or agreed to in writing, software
+    * distributed under the License is distributed on an "AS IS" BASIS,
+    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+    * either express or implied. See the License for the specific language
+    * governing permissions and limitations under the License.
+-->
+
+<web-app xmlns="http://java.sun.com/xml/ns/j2ee"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
+    version="2.4">
+
+
+    <!-- +++++++++++++++++++++++++++++++[ filter ]+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- Http Request Filter -->
+    <filter>
+        <filter-name>HttpRequestFilter</filter-name>
+        <filter-class>
+            jp.co.rct.jj.base.filter.HttpRequestFilter
+        </filter-class>
+    </filter>
+
+    <!-- R2Profile Filter -->
+    <filter>
+        <filter-name>requestPerformanceProbeFilter</filter-name>
+        <filter-class>
+            r2framework.profile.filter.PerformanceProbeFilter
+        </filter-class>
+        <init-param>
+            <param-name>probeStatusName</param-name>
+            <param-value>ProbeStatus_unyo-tool</param-value>
+        </init-param>
+        <init-param>
+            <param-name>componentName</param-name>
+            <param-value>REQ</param-value>
+        </init-param>
+        <init-param>
+            <param-name>primary</param-name>
+            <param-value>true</param-value>
+        </init-param>
+        <init-param>
+            <param-name>probe</param-name>
+            <param-value>false</param-value>
+        </init-param>
+        <init-param>
+            <param-name>requestParamEnabled</param-name>
+            <param-value>false</param-value>
+        </init-param>
+    </filter>
+    <filter>
+        <filter-name>actionServletPerformanceProbeFilter</filter-name>
+        <filter-class>
+            r2framework.profile.filter.PerformanceProbeFilter
+        </filter-class>
+        <init-param>
+            <param-name>componentName</param-name>
+            <param-value>ASV</param-value>
+        </init-param>
+    </filter>
+    <filter>
+        <filter-name>jspPerformanceProbeFilter</filter-name>
+        <filter-class>
+            r2framework.profile.filter.PerformanceProbeFilter
+        </filter-class>
+        <init-param>
+            <param-name>componentName</param-name>
+            <param-value>JSP</param-value>
+        </init-param>
+        <init-param>
+            <param-name>displayServlet</param-name>
+            <param-value>true</param-value>
+        </init-param>
+    </filter>
+
+    <filter>
+        <filter-name>sjisencodingfilter</filter-name>
+        <filter-class>
+            org.seasar.extension.filter.EncodingFilter
+        </filter-class>
+        <init-param>
+            <param-name>encoding</param-name>
+            <param-value>Windows-31J</param-value>
+        </init-param>
+    </filter>
+
+    <filter>
+        <filter-name>encodingfilter</filter-name>
+        <filter-class>
+            org.seasar.extension.filter.EncodingFilter
+        </filter-class>
+        <init-param>
+            <param-name>encoding</param-name>
+            <param-value>UTF-8</param-value>
+        </init-param>
+    </filter>
+
+    <!-- 例外ハンドリングフィルター -->
+    <filter>
+        <filter-name>ExceptionHandleFilter</filter-name>
+        <filter-class>
+            jp.co.rct.jj.base.filter.ExceptionHandleFilter
+        </filter-class>
+        <init-param>
+            <param-name>systemId</param-name>
+            <param-value>unyo-tool</param-value>
+        </init-param>
+        <init-param>
+            <param-name>requestIdKey</param-name>
+            <param-value></param-value>
+        </init-param>
+        <init-param>
+            <param-name>hostnameServiceName</param-name>
+            <param-value>unyo-tool#Hostname</param-value>
+        </init-param>
+    </filter>
+
+    <filter>
+        <filter-name>s2filter</filter-name>
+        <filter-class>
+            jp.co.rct.jj.base.filter.JJS2ContainerFilter
+        </filter-class>
+    </filter>
+    <filter>
+        <filter-name>hotdeployfilter</filter-name>
+        <filter-class>
+            org.seasar.framework.container.hotdeploy.HotdeployFilter
+        </filter-class>
+    </filter>
+    <filter>
+        <filter-name>routingfilter</filter-name>
+        <filter-class>
+            jp.co.rct.jj.base.filter.JJRoutingFilter
+        </filter-class>
+        <init-param>
+            <param-name>jspDirectAccess</param-name>
+            <param-value>false</param-value>
+        </init-param>
+    </filter>
+    <filter>
+        <filter-name>PrefixFilter</filter-name>
+        <filter-class>
+            jp.co.rct.jj.base.filter.PrefixFilter
+        </filter-class>
+    </filter>
+
+    <filter>
+        <filter-name>HttpRequestParameterFilter</filter-name>
+        <filter-class>
+            jp.co.rct.jj.base.filter.HttpRequestParameterFilter
+        </filter-class>
+        <init-param>
+            <param-name>IllegalExpressionsCSV</param-name>
+            <param-value>
+                .*onload.*,.*onclick.*,.*onchange.*,.*onsubmit.*,.*onerror.*,.*onmouseover.*,.*onabort.*,.*onblur.*,.*onmouseup.*,.*ondbclick.*,.*ondragdrop.*,.*onfocus.*,.*onkeydown.*,.*onkeypress.*,.*onkeyup.*,.*onmouseout.*,.*onmove.*,.*onreset.*,.*onresize.*,.*onselect.*,.*onunload.*,.*onmousemove.*,.*onmousedown.*,.*javascript:.*,.*vbscript:.*,.*about:.*,.*%3c.*,.*%3e.*,.*%22.*,.*%3b.*,.*%26.*,.*&lt;.*[Ss][Cc][Rr][Ii][Pp][Tt].*&gt;.*,.*&amp;\{[a-z0-9_:
+                ;&apos;\&quot;()]+;\};.*,.*--&gt;.*,.*&quot;&gt;.*,.*'&gt;.*
+            </param-value>
+        </init-param>
+    </filter>
+
+    <!-- jsessionid削除フィルター -->
+    <filter>
+        <filter-name>JSessionQueryRemoveFilter</filter-name>
+        <filter-class>
+            r2framework.web.filter.JSessionQueryRemoveFilter
+        </filter-class>
+    </filter>
+
+   <!-- 環境依存定数フィルター -->
+   <filter>
+       <filter-name>EnvSetFilter</filter-name>
+       <filter-class>
+           jp.co.rct.jj.base.filter.EnvSettingFilter
+       </filter-class>
+       <init-param>
+           <param-name>envName</param-name>
+           <param-value>KEISAI_SITE_KBN</param-value>
+       </init-param>
+       <init-param>
+           <param-name>attributeKey</param-name>
+           <param-value>_HERITAGE_KEISAI_SITE_KBN</param-value>
+       </init-param>
+   </filter>
+
+
+    <!-- +++++++++++++++++++++++++++++++[ filter-mapping ]+++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- Http Request Filter -->
+    <filter-mapping>
+        <filter-name>HttpRequestFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>sjisencodingfilter</filter-name>
+        <url-pattern>/common/shiryou/JJ901FG001/*</url-pattern>
+        <url-pattern>/chintai/shiryou/FR301FG005/*</url-pattern>
+        <url-pattern>/chintai/shiryou/FR301FG006/*</url-pattern>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>encodingfilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
+    <!-- R2Profile Filter Mapping -->
+   <filter-mapping>
+       <filter-name>requestPerformanceProbeFilter</filter-name>
+       <url-pattern>/*</url-pattern>
+       <dispatcher>REQUEST</dispatcher>
+   </filter-mapping>
+   <filter-mapping>
+       <filter-name>actionServletPerformanceProbeFilter</filter-name>
+       <url-pattern>*.do</url-pattern>
+       <dispatcher>FORWARD</dispatcher>
+   </filter-mapping>
+   <filter-mapping>
+       <filter-name>jspPerformanceProbeFilter</filter-name>
+       <url-pattern>*.jsp</url-pattern>
+       <dispatcher>FORWARD</dispatcher>
+   </filter-mapping>
+
+    <!-- 例外ハンドリングフィルター -->
+    <filter-mapping>
+        <filter-name>ExceptionHandleFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>hotdeployfilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
+        <dispatcher>INCLUDE</dispatcher>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>s2filter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
+        <dispatcher>INCLUDE</dispatcher>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>routingfilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>PrefixFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>HttpRequestParameterFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
+    </filter-mapping>
+
+    <!-- jsessionid削除フィルター -->
+    <filter-mapping>
+        <filter-name>JSessionQueryRemoveFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
+        <dispatcher>INCLUDE</dispatcher>
+    </filter-mapping>
+
+   <filter-mapping>
+       <filter-name>EnvSetFilter</filter-name>
+       <url-pattern>/*</url-pattern>
+       <dispatcher>REQUEST</dispatcher>
+       <dispatcher>FORWARD</dispatcher>
+   </filter-mapping>
+
+
+    <!-- +++++++++++++++++++++++++++++++[ servlet ]++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <servlet>
+        <servlet-name>action</servlet-name>
+        <servlet-class>
+            org.apache.struts.action.ActionServlet
+        </servlet-class>
+        <init-param>
+            <param-name>config</param-name>
+            <param-value>/WEB-INF/struts-config.xml</param-value>
+        </init-param>
+        <init-param>
+            <param-name>configFactory</param-name>
+            <param-value>
+                org.seasar.struts.config.S2ModuleConfigFactory
+            </param-value>
+        </init-param>
+        <init-param>
+            <param-name>debug</param-name>
+            <param-value>2</param-value>
+        </init-param>
+        <init-param>
+            <param-name>detail</param-name>
+            <param-value>2</param-value>
+        </init-param>
+        <load-on-startup>2</load-on-startup>
+    </servlet>
+
+    <servlet>
+        <servlet-name>s2container</servlet-name>
+        <servlet-class>
+            org.seasar.framework.container.servlet.S2ContainerServlet
+        </servlet-class>
+        <load-on-startup>3</load-on-startup>
+    </servlet>
+
+    <!-- +++++++++++++++++++++++++++++++[ servlet-mapping ]++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <servlet-mapping>
+        <servlet-name>action</servlet-name>
+        <url-pattern>*.do</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>s2container</servlet-name>
+        <url-pattern>/s2container</url-pattern>
+    </servlet-mapping>
+
+    <!-- +++++++++++++++++++++++++++++++[ エラー画面 ]+++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <error-page>
+        <exception-type>java.lang.Throwable</exception-type>
+        <location>/common/system_error.jsp</location>
+    </error-page>
+
+    <error-page>
+    	<error-code>400</error-code>
+    	<location>/errorDocument/400.html</location>
+    </error-page>
+    <error-page>
+    	<error-code>403</error-code>
+    	<location>/errorDocument/403.html</location>
+    </error-page>
+    <error-page>
+    	<error-code>404</error-code>
+    	<location>/errorDocument/404.html</location>
+    </error-page>
+    <error-page>
+    	<error-code>405</error-code>
+    	<location>/errorDocument/405.html</location>
+    </error-page>
+    <error-page>
+    	<error-code>500</error-code>
+    	<location>/errorDocument/500.html</location>
+    </error-page>
+
+
+    <!-- +++++++++++++++++++++++++++++++[ welcome-file ]+++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <welcome-file-list>
+        <welcome-file>/index.html</welcome-file>
+    </welcome-file-list>
+
+    <!-- +++++++++++++++++++++++++++++++[ jsp ]++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <jsp-config>
+        <taglib>
+            <taglib-uri>
+                http://r.recruit.co.jp/r2tags-common
+            </taglib-uri>
+            <taglib-location>
+                /WEB-INF/tld/r2tags-common.tld
+            </taglib-location>
+        </taglib>
+        <taglib>
+            <taglib-uri>http://r2framework.rui</taglib-uri>
+            <taglib-location>
+                /WEB-INF/tld/r2framework-rui.tld
+            </taglib-location>
+        </taglib>
+        <taglib>
+            <taglib-uri>
+                http://sastruts.seasar.org/functions
+            </taglib-uri>
+            <taglib-location>/WEB-INF/tld/f.tld</taglib-location>
+        </taglib>
+        <taglib>
+            <taglib-uri>http://www.suumo.jp/co/rct/suumo/amazon/analytics/customtag</taglib-uri>
+            <taglib-location>/WEB-INF/tld/vamp-customtag.tld</taglib-location>
+        </taglib>
+        <jsp-property-group>
+            <url-pattern>*.jsp</url-pattern>
+            <el-ignored>false</el-ignored>
+            <page-encoding>UTF-8</page-encoding>
+            <scripting-invalid>false</scripting-invalid>
+            <include-prelude>/common/common.jsp</include-prelude>
+        </jsp-property-group>
+        <jsp-property-group>
+            <url-pattern>*.psp</url-pattern>
+            <el-ignored>false</el-ignored>
+            <page-encoding>UTF-8</page-encoding>
+            <scripting-invalid>false</scripting-invalid>
+            <include-prelude>/common/commonXml.jsp</include-prelude>
+        </jsp-property-group>
+        <jsp-property-group>
+            <url-pattern>*.jssp</url-pattern>
+            <el-ignored>false</el-ignored>
+            <page-encoding>UTF-8</page-encoding>
+            <scripting-invalid>false</scripting-invalid>
+            <include-prelude>/common/commonJs.jsp</include-prelude>
+        </jsp-property-group>
+        <jsp-property-group>
+            <url-pattern>*.cssp</url-pattern>
+            <el-ignored>false</el-ignored>
+            <page-encoding>UTF-8</page-encoding>
+            <scripting-invalid>false</scripting-invalid>
+            <include-prelude>/common/commonCss.jsp</include-prelude>
+        </jsp-property-group>
+    </jsp-config>
+
+</web-app>

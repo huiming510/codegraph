@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//SEASAR//DTD S2Container 2.4//EN" "http://www.seasar.org/dtd/components24.dtd">
+
+<!-- 環境変数サービス設定-->
+<components>
+
+    <!-- 環境変数サービスをServletContext(Applicationスコープ)に格納する際のキー名 -->
+    <component name="APPLICATION_KEY_ENV_VALUE_DEFINE">
+        <!-- キー名は"ENV"になっています -->
+        @jp.co.rct.jj.base.env.EnvValueDefineConstant@APPLICATION_KEY
+    </component>
+
+    <!-- 環境変数サービス -->
+    <component name="envValueDefine"
+        class="jp.co.rct.jj.base.env.EnvValueDefine">
+
+        <!-- 環境変数サービス（デフォルト） -->
+        <arg>"env-value-define-xjj.properties"</arg>
+
+        <!-- サブ環境変数切り替え判定クラス -->
+        <!-- サブ環境変数切り替えを行う場合は必須 -->
+        <property name="jjPropertiesDecision">
+            <!-- 判定にドメインを使用する -->
+            new jp.co.rct.jj.base.util.JJPropertiesDomainDecision()
+        </property>
+    </component>
+
+    <!-- 環境変数サービスをServletContextに格納する設定 -->
+    <component>
+        @org.seasar.struts.util.ServletContextUtil@getServletContext().setAttribute(APPLICATION_KEY_ENV_VALUE_DEFINE,
+        envValueDefine)
+    </component>
+
+</components>

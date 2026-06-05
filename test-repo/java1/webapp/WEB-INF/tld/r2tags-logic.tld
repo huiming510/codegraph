@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<taglib xmlns="http://java.sun.com/xml/ns/j2ee"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-jsptaglibrary_2_0.xsd"
+  version="2.0">
+	<tlib-version>1.0</tlib-version>
+	<short-name>r2logic</short-name>
+	<uri>http://r.recruit.co.jp/r2tags-logic</uri>
+
+	<!--【r2logic:iterate】-->
+	<tag>
+		<description>
+			ループ時に利用.
+			<![CDATA[
+			<br>
+			strutsのlogic:iterateタグにいくつかの拡張をほどこしています。また、collection属性は非推奨として利用できないようにしています。
+			拡張ポイントは
+			<li>ループ回数制御のためにbeanSizeを取得できるようにしています</li>
+			<li>インデックスの最後を判定できるように拡張しています</li>
+			<li>インデックス値をカスタム編集できるようなフラグと計算式を設定できる拡張をしています</li>
+			]]>
+		</description>
+		<name>iterate</name>
+		<tag-class>r2framework.web.taglib.r2.logic.R2IterateTag</tag-class>
+		<tei-class>org.apache.struts.taglib.logic.IterateTei</tei-class>
+		<body-content>JSP</body-content>
+		<attribute>
+			<description>
+			<![CDATA[
+			JSP内で使用する変数名を指定します。ループの内部ではこの名称で値を取得できます。この項目は必須です。<br>
+			以下の例だとスコープに格納されているdtoListをループでまわし、一時変数としてdtoという名称で保存（実体としては、
+			requestscopeにsetAttributeされています）。requestScopeに存在しているのでループの中ではr2:writeのname属性でアクセスしてデータを
+			取り出すことができます。
+			【例】<br>
+			&lt;r2logic:iterate id=&quot;dto&quot; name=&quot;dtoList&quot;&gt;<br>
+				　　&lt;r2:write name=&quot;dto&quot; property=&quot;prefCd&quot;/&gt;<br>
+			&lt;/r2:logic&gt;
+			]]>
+			</description>
+			<name>id</name>
+			<required>true</required>
+			<rtexprvalue>false</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>
+				スコープに格納されているcollectionで取得できるオブジェクトを指定します。この項目に関しても必須にしています。
+			</description>
+			<name>name</name>
+			<required>true</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>
+				name属性で取得したオブジェクトのネストしたプロパティを、id属性として指定したいようなケースで利用します。
+			</description>
+			<name>property</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>
+				現在のindex番号を格納する変数を指定します。
+			</description>
+			<name>indexId</name>
+			<required>false</required>
+			<rtexprvalue>false</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>
+				<![CDATA[
+				現在のindex番号を格納する変数を指定します。
+				<a href="http://struts.wasureppoi.com/taglib/06_iterate.html" target="_blank">こちら</a>を
+				参考にしてください。
+				]]>
+			</description>
+			<name>length</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>
+				繰り返し処理を開始するindex番号を指定します。省略時はゼロ※１
+			</description>
+			<name>offset</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>
+			 	name属性で指定したオブジェクトを取り出すscopeを指定します。指定しない場合、pege、request、session、spplicationの順で検索します。
+			</description>
+			<name>scope</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>
+				コレクションの型を指定します。
+			</description>
+			<name>type</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>ビーンのサイズを取得するための変数名です.</description>
+			<name>beanSizeId</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>インデックスのLASTの値を取得する変数名です.</description>
+			<name>lastIndexId</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>カスタムINDEX値を取得する変数名です.</description>
+			<name>customIndexId</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>カスタムインデックスのための計算式です.1や-1という形式で入力します.</description>
+			<name>customCalculate</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+			<type>java.lang.Integer</type>
+		</attribute>
+		<!--
+		<attribute>
+			<description>
+			スクリプレットで利用するものであるため非推奨とする。
+			</description>
+			<name>collection</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		 -->
+		 <example>
+【アクションクラス】
+public List&lt;TeamDto&gt; teamDtoList;
+
+public class TeamDto{
+	　　public String name;
+	　　public String team;
+	　　public List&lt;String&gt; roleList;
+}
+
+【JSPの指定】
+&lt;table class=&quot;bodyTable&quot; border=&quot;1&quot;&gt;
+&lt;tbody&gt;
+	　　&lt;tr class=&quot;a&quot;&gt;
+		　　　　&lt;th&gt;名前&lt;/th&gt;&lt;th&gt;組織&lt;/th&gt;&lt;th&gt;役割&lt;/th&gt;&lt;th&gt;画像&lt;/th&gt;
+	　　&lt;/tr&gt;
+	　　&lt;logic:iterate id=&quot;teamDto&quot; name=&quot;teamDtoList&quot;&gt;
+	　　&lt;tr class=&quot;b&quot;&gt;
+		　　　　&lt;td&gt;&lt;r2:write name=&quot;teamDto&quot; property=&quot;name&quot;/&gt;&lt;/td&gt;
+		　　　　&lt;td&gt;&lt;r2:write name=&quot;teamDto&quot; property=&quot;team&quot;/&gt;&lt;/td&gt;
+		　　　　&lt;td&gt;
+			　　　　　　　　&lt;!-- ネストしたタグのnameには親のIDを指定するんですね --&gt;
+			　　　　　　　　&lt;r2logic:iterate id=&quot;list&quot; name=&quot;teamDto&quot; property=&quot;roleList&quot; indexId=&quot;i&quot; lastIndexId=&quot;lastindex&quot;&gt;
+				　　　　　　　　　　&lt;r2logic:equal name=&quot;i&quot; value=&quot;0&quot;&gt;
+					　　　　　　　　　　　　&lt;c:out value=&quot;最初に出力します&lt;BR&gt;&quot; escapeXml=&quot;false&quot;/&gt;
+				　　　　　　　　　　&lt;/r2logic:equal&gt;
+				　　　　　　　　　　&lt;r2:write name=&quot;list&quot;/&gt;
+				　　　　　　　　　　&lt;r2logic:equal name=&quot;i&quot; compareKeyName=&quot;lastindex&quot; &gt;
+				 		　　　　　　　　　　　　　　&lt;c:out value=&quot;&lt;/BR&gt;最後だよに出力します&quot; escapeXml=&quot;false&quot;/&gt;
+				 		　　　　　　　　　　　　　　&lt;img src=&quot;images/believe_sky.png&quot;/&gt;
+				 　　　　　　　　　　&lt;/r2logic:equal&gt;
+			　　　　　　　　&lt;/r2logic:iterate&gt;
+		　　　　&lt;/td&gt;
+		　　　　&lt;td&gt;&lt;img src=&quot;images/believe_sky.png&quot;/&gt;&lt;/td&gt;
+	　　&lt;/tr&gt;
+	　　&lt;/logic:iterate&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+		 </example>
+	</tag>
+
+
+
+
+
+
+</taglib>
+

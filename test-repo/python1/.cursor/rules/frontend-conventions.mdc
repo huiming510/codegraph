@@ -1,0 +1,72 @@
+---
+description: Frontend 开发规约（Vue3、API、路由、状态）
+globs: src/frontend/**/*
+alwaysApply: false
+---
+
+# Frontend 开发规约
+
+本规则适用于 `src/frontend` 下所有代码，保证与现有请求/路由/状态体系一致。**代码注释**须符合本目录下 `code-comments.mdc`（模块头、api/modules 导出方法注释或 JSDoc、复杂逻辑说明；禁止废代码注释块与无信息量注释）。
+
+## 1. 目录与职责
+
+- **api/index.js**：axios 封装实例，已处理 baseURL、`{ code, data, msg }`、401 跳转登录、loading；不要新建其它 axios 实例。
+- **api/modules/*.js**：按业务模块拆分（如 `knowledgeBase.js`、`document.js`），每个方法对应后端一个接口；路径不含 `/api`（baseURL 已带）。
+- **views/**：页面级组件；一个功能一个目录，内含 `index.vue` 或按 tab/步骤再分子目录。
+- **components/**：可复用 UI 组件；与业务强相关的放在对应 `views/xxx/components/`。
+- **stores/**：Pinia 模块（auth、user、global 等）；不混用 Vuex。
+- **router/**：静态路由在 `modules/staticRouter.js`，动态路由在 `modules/dynamicRouter.js`；新增菜单/权限由后端控制，前端按接口注入路由。
+
+## 2. 请求与 API
+
+- 所有 HTTP 请求通过 `import request from "@/api"`（即 `api/index.js` 导出的实例）。
+- 成功时拦截器已返回 `data.data`，业务代码直接拿到的就是后端 `data` 字段。
+- 新增接口：在对应 `api/modules/xxx.js` 中新增方法，路径与后端一致（如后端 `GET /api/knowledge-bases`，前端写 `request.get("/knowledge-bases", params)`）。
+
+```javascript
+// ✅ 正确：在 api/modules/xxx.js 中
+import request from "@/api";
+export const getXxx = (params = {}) => request.get("/xxx", params);
+export const createXxx = data => request.post("/xxx", data);
+```
+
+## 3. 路由与权限
+
+- 需要登录的页面：不放在白名单，依赖 `userStore.token` 与动态路由；401 时请求拦截器会清 token 并跳转登录。
+- 新增页面：在 `views/` 下新增组件，路由由后端菜单接口返回或静态路由配置；若为动态菜单，确保 `dynamicRouter.js` 中 `component` 路径与 `views` 下路径一致（如 `/src/views/xxx/index.vue`）。
+
+## 4. 命名与风格
+
+- 组件名：大驼峰；文件名与目录名与路由 path 保持一致（小写、短横线或驼峰按现有项目习惯）。
+- API 方法名：与后端语义一致，小驼峰（如 `getKnowledgeBases`、`createKnowledgeBase`）。
+- 使用项目已有的 ESLint / Prettier / Stylelint 配置，不关闭或大面积改规则。
+
+## 5. 新增功能检查清单
+
+- [ ] 新接口写在 `api/modules` 对应模块，使用 `request.get/post/put/delete`。
+- [ ] 新页面放在 `views/` 下，如需菜单则在权限/静态路由中配置。
+- [ ] 不新建 axios 实例，不绕过 `api/index.js` 的拦截器。
+- [ ] 环境变量使用 `import.meta.env.VITE_APP_*`，与 `.env.development` 等一致。
+
+## 6. 示例（正确写法）
+
+```javascript
+// api/modules/xxx.js
+import request from "@/api";
+export const getXxxList = (params = {}) => request.get("/xxx", params);
+export const getXxx = id => request.get(`/xxx/${id}`);
+export const createXxx = data => request.post("/xxx", data);
+export const updateXxx = (id, data) => request.put(`/xxx/${id}`, data);
+export const deleteXxx = id => request.delete(`/xxx/${id}`);
+```
+
+```vue
+<!-- views/xxx/index.vue 中调用 -->
+<script setup>
+import { getXxxList } from "@/api/modules/xxx";
+const list = ref([]);
+onMounted(async () => {
+  list.value = await getXxxList({ skip: 0, limit: 20 });
+});
+</script>
+```

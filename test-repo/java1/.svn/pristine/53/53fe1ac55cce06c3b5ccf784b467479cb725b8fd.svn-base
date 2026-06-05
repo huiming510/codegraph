@@ -1,0 +1,24 @@
+.wrapper{
+  width:100%;
+}
+table{
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+table th, table td {
+  border: solid 1px black;
+  text-align:left;
+}
+table th{
+  border: solid 1px #aaaaaa;
+  background-color: #00CC99;
+}
+table td{
+  word-break: break-all;
+  word-wrap: break-all;
+}
+.cookieName{
+  word-break: normal;
+  word-wrap: normal;
+}
