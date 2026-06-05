@@ -1,0 +1,64 @@
+# Example: JSP <-> Java Component Mapping Rule
+# ==============================================
+# Demonstrates how to establish relationships between JSP pages and
+# the Java classes they reference (form-bean, useBean, action paths).
+#
+# Corresponding Python plugin: plugins/cross_file/plugins/jsp_java.py
+
+version: "1"
+
+id: jsp-java-example
+name:
+  zh: JSP 与 Java 组件映射示例
+  en: JSP <-> Java Component Mapping Example
+description: |
+  示例规则：建立 JSP 页面中引用的 Java 类（form-bean、useBean class、action 等）
+  与实际 Java 源代码之间的关联。
+rule_version: "1.0.0"
+author: codegraph
+tags:
+  - java
+  - jsp
+  - web
+  - example
+
+match:
+  source:
+    language: jsp
+    file_pattern: "**/*.jsp"
+  target:
+    language: java
+
+conditions:
+  # JSP 中引用的 Java 类名（form-bean type、useBean class 等）
+  - type: regex
+    pattern: 'class="([A-Za-z0-9_.]+)"'
+    bindings:
+      class_ref: "group(1)"
+
+  # Struts action path
+  - type: ast_query
+    query: |
+      (element
+        (start_tag
+          (attribute
+            (attribute_name) @attr-name
+            (attribute_value) @attr-value)))
+    bindings:
+      action_path: "attr-value"
+      bean_class: "attr-value"
+
+edges:
+  - name: jsp-form-bean
+    from_ref: "source:{jsp_file}"
+    to_ref: "target:{class_ref}"
+    kind: jsp_java_form
+    properties:
+      ref_type: form_bean
+
+  - name: jsp-action-forward
+    from_ref: "source:{jsp_file}"
+    to_ref: "target:{action_class}"
+    kind: jsp_java_render
+    properties:
+      path: "{action_path}"

@@ -1,0 +1,68 @@
+version: "1"
+
+id: webxml-servlet
+name:
+  zh: WebXML 与 Servlet 映射
+  en: WebXML <-> Servlet Mapping
+description: |
+  建立 web.xml 中的 servlet-mapping 与实际 Java Servlet 类
+  之间的 URL 路由映射关系。
+  同时支持 Java 端 @WebServlet 注解与 XML 配置的混合使用场景。
+rule_version: "1.0.0"
+author: codegraph
+tags:
+  - java
+  - webxml
+  - servlet
+  - cross-file
+
+match:
+  source:
+    language: xml
+    file_pattern: "**/web.xml"
+  target:
+    language: java
+    class_annotation: "@WebServlet"
+
+conditions:
+  # web.xml 中的 <servlet> 节点：类名映射
+  - type: xpath
+    query: "//servlet[servlet-class]"
+    bindings:
+      servlet_name: "servlet-name/text()"
+      servlet_class: "servlet-class/text()"
+
+  # web.xml 中的 <servlet-mapping> 节点：URL 映射
+  - type: xpath
+    query: "//servlet-mapping"
+    bindings:
+      servlet_name: "servlet-name/text()"
+      url_pattern: "url-pattern/text()"
+
+  # Java @WebServlet 注解
+  - type: annotation
+    annotation: "@WebServlet"
+    bindings:
+      url_pattern: "key=value"
+
+  # Java @WebFilter 注解（Filter 链）
+  - type: annotation
+    annotation: "@WebFilter"
+    bindings:
+      url_pattern: "key=value"
+      filter_class: "key=value"
+
+edges:
+  - name: webxml-servlet-mapping
+    from_ref: "target:{servlet_class}"
+    to_ref: "source:{url_pattern}"
+    kind: web_xml_to_servlet
+    properties:
+      servlet_name: "{servlet_name}"
+
+  - name: webxml-filter-chain
+    from_ref: "target:{filter_class}"
+    to_ref: "source:{url_pattern}"
+    kind: web_xml_to_filter
+    properties:
+      filter_type: "filter"

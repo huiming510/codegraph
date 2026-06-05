@@ -1,0 +1,60 @@
+# Example: web.xml <-> Servlet Mapping Rule
+# ===========================================
+# Demonstrates how to establish relationships between servlet declarations
+# in web.xml and actual Java Servlet classes.
+#
+# Corresponding Python plugin: plugins/cross_file/plugins/web_xml_servlet.py
+
+version: "1"
+
+id: webxml-servlet-example
+name:
+  zh: WebXML 与 Servlet 映射示例
+  en: WebXML <-> Servlet Mapping Example
+description: |
+  示例规则：建立 web.xml 中的 servlet-mapping 与实际 Java Servlet 类
+  之间的 URL 路由映射关系。
+rule_version: "1.0.0"
+author: codegraph
+tags:
+  - java
+  - webxml
+  - servlet
+  - example
+
+match:
+  source:
+    language: xml
+    file_pattern: "**/web.xml"
+  target:
+    language: java
+    class_annotation: "@WebServlet"
+
+conditions:
+  # web.xml 中的 <servlet> 节点：类名映射
+  - type: xpath
+    query: "//servlet[servlet-class]"
+    bindings:
+      servlet_name: "servlet-name/text()"
+      servlet_class: "servlet-class/text()"
+
+  # web.xml 中的 <servlet-mapping> 节点：URL 映射
+  - type: xpath
+    query: "//servlet-mapping"
+    bindings:
+      servlet_name: "servlet-name/text()"
+      url_pattern: "url-pattern/text()"
+
+  # Java @WebServlet 注解
+  - type: annotation
+    annotation: "@WebServlet"
+    bindings:
+      url_pattern: "key=value"
+
+edges:
+  - name: webxml-servlet-mapping
+    from_ref: "target:{servlet_class}"
+    to_ref: "source:{url_pattern}"
+    kind: web_xml_to_servlet
+    properties:
+      servlet_name: "{servlet_name}"

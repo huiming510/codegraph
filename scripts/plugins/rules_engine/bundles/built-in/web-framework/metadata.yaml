@@ -1,0 +1,24 @@
+id: web-framework
+name:
+  zh: Web 框架映射规则集
+  en: Web Framework Mapping Rules
+version: "1.0.0"
+description:
+  zh: 识别 JSP 页面与 Java 组件、WebXML 与 Servlet 之间的映射关系。
+  en: Identifies mapping between JSP pages and Java components, web.xml and Servlets.
+author: codegraph
+license: MIT
+homepage: https://github.com/codegraph/rules
+targets:
+  languages:
+    - java
+    - xml
+    - jsp
+  frameworks:
+    - servlet
+    - struts
+    - jsp
+dependencies: []
+rules:
+  - file: jsp-java.yaml
+  - file: webxml-servlet.yaml

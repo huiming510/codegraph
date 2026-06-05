@@ -1,0 +1,98 @@
+version: "1"
+
+id: mybatis-orm
+name:
+  zh: MyBatis 实体映射
+  en: MyBatis Entity Mapping
+description: |
+  建立 MyBatis XML resultMap / @Results 注解与 Java Entity
+  之间的属性映射关系，生成 sql_mapping 类型的边。
+  从 @Mapper 接口的 @Result/@Results 注解、XML resultMap 的 result 节点、
+  以及 @Select/@Insert 等注解的 SQL 文本中提取 property-column 映射。
+rule_version: "1.0.0"
+author: codegraph
+tags:
+  - java
+  - orm
+  - mybatis
+  - cross-file
+  - sql-mapping
+
+match:
+  source:
+    language: java
+    annotation: "@Mapper"
+  target:
+    language: java
+    class_annotation: "@Entity"
+
+conditions:
+  # 从 @Mapper 接口的 @Result 单注解提取 property/column 映射
+  - type: annotation
+    annotation: "@Result"
+    bindings:
+      property: "key=property"
+      column: "key=column"
+      table: "key=table"
+
+  # 从 @Mapper 接口的 @Results(value={@Result}) 嵌套模式提取
+  - type: ast_query
+    query: |
+      (method_declaration
+        (annotation
+          name: (identifier) @ann-name
+          (annotation_arguments
+            (element
+              value: (annotation
+                name: (identifier) @result-ann
+                (annotation_arguments
+                  (element
+                    value: (annotation_argument_pair
+                      key: (identifier) @key
+                      value: (string) @value))))))))
+    bindings:
+      property: "key=property"
+      column: "key=column"
+
+  # 从 @Select、@Insert、@Update、@Delete 等注解的 SQL 文本中提取 AS 别名
+  - type: ast_query
+    query: |
+      (method_declaration
+        (annotation
+          name: (identifier) @sql-ann
+          (annotation_arguments
+            (string) @sql-text)))
+    bindings:
+      sql_text: "text"
+
+  # XML Mapper resultMap 中的 result 节点
+  - type: ast_query
+    target: source
+    query: |
+      (element
+        (start_tag
+          (attribute
+            (attribute_name) @attr-name
+            (attribute_value) @attr-value))
+        (element
+          (start_tag
+            (attribute
+              (attribute_name) @prop-name
+              (attribute_value) @prop-value)
+            (attribute
+              (attribute_name) @col-name
+              (attribute_value) @col-value))))
+    bindings:
+      result-map-id: "attr-value"
+      property: "prop-value"
+      column: "col-value"
+
+edges:
+  - name: entity-field-to-column
+    from_ref: "target:{class}.{property}"
+    to_ref: "db::{column}"
+    kind: sql_mapping
+    properties:
+      mapping_type: "annotation"
+      table: "{table}"
+    line_ref: line

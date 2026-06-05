@@ -1,0 +1,76 @@
+version: "1"
+
+id: jsp-java
+name:
+  zh: JSP 与 Java 组件映射
+  en: JSP <-> Java Component Mapping
+description: |
+  建立 JSP 页面中引用的 Java 类（form-bean、useBean class、action 等）
+  与实际 Java 源代码之间的关联。
+rule_version: "1.0.0"
+author: codegraph
+tags:
+  - java
+  - jsp
+  - web
+  - cross-file
+
+match:
+  source:
+    language: jsp
+    file_pattern: "**/*.jsp"
+  target:
+    language: java
+
+conditions:
+  # JSP 中引用的 Java 类名（form-bean type、useBean class 等）
+  - type: regex
+    pattern: 'class="([A-Za-z0-9_.]+)"'
+    bindings:
+      class_ref: "group(1)"
+
+  # JSP 中使用 useBean 标签引入的 Java 类
+  - type: regex
+    pattern: '<jsp:useBean\s+[^>]*class="([A-Za-z0-9_.]+)"'
+    bindings:
+      bean_class: "group(1)"
+
+  # Struts action path 引用
+  - type: regex
+    pattern: 'action="([^"]+)"'
+    bindings:
+      action_path: "group(1)"
+
+  # Struts form 提交目标
+  - type: regex
+    pattern: '<form[^>]+action="([^"]+)"'
+    bindings:
+      form_action: "group(1)"
+
+  # JSP 中通过 request/session 获取的对象引用
+  - type: regex
+    pattern: '(request|session)\.getAttribute\("([^"]+)"\)'
+    bindings:
+      attr_name: "group(2)"
+
+edges:
+  - name: jsp-form-bean
+    from_ref: "source:{jsp_file}"
+    to_ref: "target:{class_ref}"
+    kind: jsp_java_form
+    properties:
+      ref_type: form_bean
+
+  - name: jsp-usebean
+    from_ref: "source:{jsp_file}"
+    to_ref: "target:{bean_class}"
+    kind: jsp_java_usebean
+    properties:
+      ref_type: use_bean
+
+  - name: jsp-action-forward
+    from_ref: "source:{jsp_file}"
+    to_ref: "target:{action_path}"
+    kind: jsp_java_render
+    properties:
+      path: "{action_path}"

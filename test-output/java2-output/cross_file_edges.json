@@ -4486,5 +4486,245 @@
     "to_type": "java",
     "kind": "java_extends",
     "category": "intra_type"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.favorite.ArticleFavorite.articleId",
+    "to_qname": "db::articleFavoriteArticleId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleFavoriteMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.favorite.ArticleFavorite.userId",
+    "to_qname": "db::articleFavoriteUserId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleFavoriteMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.id",
+    "to_qname": "db::articleId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.favorite.ArticleFavorite.userId",
+    "to_qname": "db::articleUserId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.title",
+    "to_qname": "db::articleTitle",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.slug",
+    "to_qname": "db::articleSlug",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.description",
+    "to_qname": "db::articleDescription",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.body",
+    "to_qname": "db::articleBody",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.createdAt",
+    "to_qname": "db::articleCreatedAt",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.updatedAt",
+    "to_qname": "db::articleUpdatedAt",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.id",
+    "to_qname": "db::tagId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Tag.name",
+    "to_qname": "db::tagName",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\ArticleMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.id",
+    "to_qname": "db::commentId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\CommentMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.body",
+    "to_qname": "db::commentBody",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\CommentMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.favorite.ArticleFavorite.userId",
+    "to_qname": "db::commentUserId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\CommentMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.favorite.ArticleFavorite.articleId",
+    "to_qname": "db::commentArticleId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\CommentMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.createdAt",
+    "to_qname": "db::commentCreatedAt",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\CommentMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.id",
+    "to_qname": "db::userId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\TransferData.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.application.data.ProfileData.username",
+    "to_qname": "db::userUsername",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\TransferData.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.application.data.ProfileData.bio",
+    "to_qname": "db::userBio",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\TransferData.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.application.data.ProfileData.image",
+    "to_qname": "db::userImage",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\TransferData.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.updatedAt",
+    "to_qname": "db::commentCreatedAt",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\TransferData.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.favorite.ArticleFavorite.userId",
+    "to_qname": "db::followUserId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\UserMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.user.FollowRelation.targetId",
+    "to_qname": "db::followTargetId",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\UserMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.article.Article.id",
+    "to_qname": "db::id",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\UserMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.application.data.ProfileData.username",
+    "to_qname": "db::username",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\UserMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.user.User.email",
+    "to_qname": "db::email",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\UserMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.core.user.User.password",
+    "to_qname": "db::password",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\UserMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.application.data.ProfileData.bio",
+    "to_qname": "db::bio",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\UserMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
+  },
+  {
+    "kind": "sql_mapping",
+    "from_qname": "io.spring.application.data.ProfileData.image",
+    "to_qname": "db::image",
+    "file": "D:\\CodeGraph\\codegraph\\test-repo\\java2\\src\\main\\resources\\mapper\\UserMapper.xml",
+    "line": 0,
+    "category": "cross_layer"
   }
 ]

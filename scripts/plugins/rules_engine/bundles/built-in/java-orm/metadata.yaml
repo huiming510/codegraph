@@ -1,0 +1,20 @@
+id: java-orm
+name:
+  zh: Java ORM 映射规则集
+  en: Java ORM Mapping Rules
+version: "1.0.0"
+description:
+  zh: 识别和建立 Java ORM 框架（MyBatis、Spring Data JPA）中的实体映射关系。
+  en: Identifies and establishes entity mapping relationships in Java ORM frameworks.
+author: codegraph
+license: MIT
+homepage: https://github.com/codegraph/rules
+targets:
+  languages:
+    - java
+  frameworks:
+    - mybatis
+    - spring-data-jpa
+dependencies: []
+rules:
+  - file: mybatis-orm.yaml
