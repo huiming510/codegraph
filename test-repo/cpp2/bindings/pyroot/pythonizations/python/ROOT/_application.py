@@ -1,0 +1,105 @@
+# Author: Enric Tejedor CERN  04/2019
+
+################################################################################
+# Copyright (C) 1995-2019, Rene Brun and Fons Rademakers.                      #
+# All rights reserved.                                                         #
+#                                                                              #
+# For the licensing terms see $ROOTSYS/LICENSE.                                #
+# For the list of contributors see $ROOTSYS/README/CREDITS.                    #
+################################################################################
+
+import sys
+import time
+
+
+class PyROOTApplication(object):
+    """
+    Application class for PyROOT.
+    Configures the interactive usage of ROOT from Python.
+    """
+
+    def __init__(self, config, is_ipython):
+        from ROOT.libROOTPythonizations import InitApplication
+
+        # Construct a TApplication for PyROOT
+        InitApplication(config.IgnoreCommandLineOptions)
+
+        self._is_ipython = is_ipython
+
+    @staticmethod
+    def _ipython_config():
+        # Integrate IPython >= 5 with ROOT's event loop
+        # Check for new GUI events until there is some user input to process
+
+        from IPython import get_ipython
+        from IPython.terminal import pt_inputhooks
+        from IPython.terminal.interactiveshell import TerminalInteractiveShell
+
+        def inputhook(context):
+            import ROOT
+
+            while not context.input_is_ready():
+                ROOT.gSystem.ProcessEvents()
+                time.sleep(0.01)
+
+        pt_inputhooks.register("ROOT", inputhook)
+
+        ipy = get_ipython()
+
+        # Only the TerminalInteractiveShell will use the input hooks that are
+        # registered via terminal.pt_inputhooks.
+        if ipy and isinstance(ipy, TerminalInteractiveShell):
+            get_ipython().run_line_magic("gui", "ROOT")
+
+    @staticmethod
+    def _inputhook_config():
+        # PyOS_InputHook-based mechanism
+        # Point to a function which will be called when Python's interpreter prompt
+        # is about to become idle and wait for user input from the terminal
+        from ROOT.libROOTPythonizations import InstallGUIEventInputHook
+
+        InstallGUIEventInputHook()
+
+    @staticmethod
+    def _set_display_hook():
+        # Set the display hook
+
+        orig_dhook = sys.displayhook
+
+        def displayhook(v):
+            # sys.displayhook is called on the result of evaluating an expression entered
+            # in an interactive Python session.
+            # Therefore, this function will call EndOfLineAction after each interactive
+            # command (to update display etc.)
+            import ROOT
+
+            ROOT.gInterpreter.EndOfLineAction()
+            return orig_dhook(v)
+
+        sys.displayhook = displayhook
+
+    def init_graphics(self, gEnv, gSystem):
+        """Configure ROOT graphics to be used interactively"""
+
+        # Note that we only end up in this function if gROOT.IsBatch() is false
+        import __main__
+
+        if self._is_ipython and "IPython" in sys.modules and sys.modules["IPython"].version_info[0] >= 5:
+            # ipython and notebooks, register our event processing with their hooks
+            self._ipython_config()
+        elif (sys.flags.interactive == 1 or not hasattr(__main__, "__file__")) and not gSystem.InheritsFrom(
+            "TWinNTSystem"
+        ):
+            # Python in interactive mode, use the PyOS_InputHook to call our event processing
+            # - sys.flags.interactive checks for the -i flags passed to python
+            # - __main__ does not have the attribute __file__ if the Python prompt is started directly
+            # - does not work properly on Windows
+            self._inputhook_config()
+            gEnv.SetValue("WebGui.ExternalProcessEvents", "yes")
+        else:
+            # Python in script mode, instead of separate thread methods like canvas.Update should run events
+
+            # indicate that ProcessEvents called in different thread, let ignore thread id checks in RWebWindow
+            gEnv.SetValue("WebGui.ExternalProcessEvents", "yes")
+
+        self._set_display_hook()

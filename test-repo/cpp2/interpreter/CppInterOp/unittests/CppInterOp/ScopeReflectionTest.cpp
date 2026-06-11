@@ -1,0 +1,1421 @@
+#include "Utils.h"
+
+#include "CppInterOp/CppInterOp.h"
+
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDumper.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/Version.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Sema/Sema.h"
+
+#include "gtest/gtest.h"
+
+#include <CppInterOp/CppInterOpTypes.h>
+#include <memory>
+#include <string>
+
+using namespace TestUtils;
+using namespace llvm;
+using namespace clang;
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetTypeOfBuiltins) {
+  // Structural check: Ensure every valid BuiltinType kind can be resolved
+  TestFixture::CreateInterpreter();
+  ASTContext& C = Interp->getCI()->getASTContext(); // for brevity
+
+#define BUILTIN_TYPE(Id, SingletonId)                                          \
+  {                                                                            \
+    QualType QT = C.SingletonId;                                               \
+    if (!QT.isNull()) {                                                        \
+      std::string name = QT.getAsString(C.getPrintingPolicy());                \
+      if (name[0] != '<' && !QT->isPlaceholderType()) {                        \
+        const auto* FoundTy = Cpp::GetType(name);                              \
+        EXPECT_TRUE(FoundTy) << "Failed to find builtin: '" << name << "'";    \
+        if (FoundTy) {                                                         \
+          EXPECT_EQ(FoundTy, QT.getAsOpaquePtr())                              \
+              << "Type mismatch for '" << name << "'";                         \
+          EXPECT_TRUE(Cpp::IsBuiltin(FoundTy));                                \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+  }
+#include "clang/AST/BuiltinTypes.def"
+#undef BUILTIN_TYPE
+
+  auto Verify = [&](const char* Name, QualType Expected) {
+    void* Found = Cpp::GetType(Name);
+    EXPECT_EQ(Found, Expected.getAsOpaquePtr()) << "Failed for: " << Name;
+  };
+
+  // --- Integer Variations ---
+  Verify("int", C.IntTy);
+  Verify("signed int", C.IntTy);
+  Verify("signed", C.IntTy);
+  Verify("int signed", C.IntTy);
+
+  // --- Short Variations ---
+  Verify("short", C.ShortTy);
+  Verify("short int", C.ShortTy);
+  Verify("signed short", C.ShortTy);
+  Verify("signed short int", C.ShortTy);
+  Verify("int short signed", C.ShortTy);
+
+  // --- Long Variations ---
+  Verify("long", C.LongTy);
+  Verify("long int", C.LongTy);
+  Verify("signed long", C.LongTy);
+  Verify("signed long int", C.LongTy);
+  Verify("int long", C.LongTy);
+
+  // --- Long Long Variations ---
+  Verify("long long", C.LongLongTy);
+  Verify("long long int", C.LongLongTy);
+  Verify("signed long long", C.LongLongTy);
+  Verify("signed long long int", C.LongLongTy);
+  Verify("int long long signed", C.LongLongTy);
+
+  // --- Unsigned Variations ---
+  Verify("unsigned", C.UnsignedIntTy);
+  Verify("unsigned int", C.UnsignedIntTy);
+  Verify("int unsigned", C.UnsignedIntTy);
+
+  Verify("unsigned short", C.UnsignedShortTy);
+  Verify("unsigned short int", C.UnsignedShortTy);
+  Verify("int short unsigned", C.UnsignedShortTy);
+
+  Verify("unsigned long", C.UnsignedLongTy);
+  Verify("unsigned long int", C.UnsignedLongTy);
+
+  Verify("unsigned long long", C.UnsignedLongLongTy);
+  Verify("unsigned long long int", C.UnsignedLongLongTy);
+
+  // --- Character Variations (No 'int' suffix allowed) ---
+  Verify("char", C.CharTy);
+  Verify("signed char", C.SignedCharTy);
+  Verify("unsigned char", C.UnsignedCharTy);
+
+  // Negative check: signed char int is NOT a valid builtin
+  EXPECT_EQ(Cpp::GetType("signed char int"), nullptr);
+
+  // Maybe these should be considered builtins?
+  // EXPECT_EQ(Cpp::GetType("size_t"), C.getSizeType().getAsOpaquePtr());
+  // EXPECT_EQ(Cpp::GetType("ptrdiff_t"),
+  // C.getPointerDiffType().getAsOpaquePtr());
+  // EXPECT_EQ(Cpp::GetType("intptr_t"), C.getIntPtrType().getAsOpaquePtr());
+  // EXPECT_EQ(Cpp::GetType("uintptr_t"), C.getUIntPtrType().getAsOpaquePtr());
+  // EXPECT_EQ(Cpp::GetType("size_t"), C.getSizeType().getAsOpaquePtr());
+  // EXPECT_EQ(Cpp::GetType("size_t"), C.getSizeType().getAsOpaquePtr());
+
+  // EXPECT_EQ(Cpp::GetType("wint_t"), C.WIntTy.getAsOpaquePtr());
+  // EXPECT_EQ(Cpp::GetType("wchar_t"), C.WCharTy.getAsOpaquePtr());
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetTypeOfTypedef) {
+  std::string code = R"(
+    typedef int Type_t;
+  )";
+
+  std::vector<Decl*> Decls;
+  GetAllTopLevelDecls(code, Decls);
+  auto Ty = Cpp::GetType("Type_t");
+  EXPECT_TRUE(Ty);
+  EXPECT_TRUE(Ty == Cpp::GetTypeFromScope(Decls[0]));
+  EXPECT_FALSE(Cpp::GetTypeFromScope(nullptr));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsEnumScope) {
+  std::vector<Decl *> Decls;
+  std::vector<Decl *> SubDecls;
+  std::string code = R"(
+    enum Switch {
+      OFF,
+      ON
+    };
+
+    Switch s = Switch::OFF;
+
+    int i = Switch::ON;
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+  GetAllSubDecls(Decls[0], SubDecls);
+  EXPECT_TRUE(Cpp::IsEnumScope(Decls[0]));
+  EXPECT_FALSE(Cpp::IsEnumScope(Decls[1]));
+  EXPECT_FALSE(Cpp::IsEnumScope(Decls[2]));
+  EXPECT_FALSE(Cpp::IsEnumScope(SubDecls[0]));
+  EXPECT_FALSE(Cpp::IsEnumScope(SubDecls[1]));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsEnumConstant) {
+  std::vector<Decl *> Decls;
+  std::vector<Decl *> SubDecls;
+  std::string code = R"(
+    enum Switch {
+      OFF,
+      ON
+    };
+
+    Switch s = Switch::OFF;
+
+    int i = Switch::ON;
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+  GetAllSubDecls(Decls[0], SubDecls);
+  EXPECT_FALSE(Cpp::IsEnumConstant(Decls[0]));
+  EXPECT_FALSE(Cpp::IsEnumConstant(Decls[1]));
+  EXPECT_FALSE(Cpp::IsEnumConstant(Decls[2]));
+  EXPECT_TRUE(Cpp::IsEnumConstant(SubDecls[0]));
+  EXPECT_TRUE(Cpp::IsEnumConstant(SubDecls[1]));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_Demangle) {
+  std::string code = R"(
+    int add(int x, int y) { return x + y; }
+    int add(double x, double y) { return x + y; }
+  )";
+
+  std::vector<Decl*> Decls;
+  GetAllTopLevelDecls(code, Decls);
+  EXPECT_EQ(Decls.size(), 2);
+
+  auto Add_int = clang::GlobalDecl(static_cast<clang::NamedDecl*>(Decls[0]));
+  auto Add_double = clang::GlobalDecl(static_cast<clang::NamedDecl*>(Decls[1]));
+
+  std::string mangled_add_int;
+  std::string mangled_add_double;
+  compat::maybeMangleDeclName(Add_int, mangled_add_int);
+  compat::maybeMangleDeclName(Add_double, mangled_add_double);
+
+  std::string demangled_add_int = Cpp::Demangle(mangled_add_int);
+  std::string demangled_add_double = Cpp::Demangle(mangled_add_double);
+
+  EXPECT_NE(demangled_add_int.find(Cpp::GetQualifiedCompleteName(Decls[0])),
+            std::string::npos);
+  EXPECT_NE(demangled_add_double.find(Cpp::GetQualifiedCompleteName(Decls[1])),
+            std::string::npos);
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsAggregate) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    char cv[4] = {};
+    int x[] = {};
+    union u { int a; const char* b; };
+    struct S {
+      int x;
+      struct Foo {
+        int i;
+        int j;
+        int a[3];
+      } b;
+   };
+   int y = 10; // Not an aggregate type
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+  EXPECT_TRUE(Cpp::IsAggregate(Decls[0]));
+  EXPECT_TRUE(Cpp::IsAggregate(Decls[1]));
+  EXPECT_TRUE(Cpp::IsAggregate(Decls[2]));
+  EXPECT_TRUE(Cpp::IsAggregate(Decls[3]));
+  EXPECT_FALSE(Cpp::IsAggregate(Decls[4]));
+}
+
+// Check that the CharInfo table has been constructed reasonably.
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsNamespace) {
+  std::vector<Decl*> Decls;
+  GetAllTopLevelDecls("namespace N {} class C{}; int I;", Decls);
+  EXPECT_TRUE(Cpp::IsNamespace(Decls[0]));
+  EXPECT_FALSE(Cpp::IsNamespace(Decls[1]));
+  EXPECT_FALSE(Cpp::IsNamespace(Decls[2]));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsClass) {
+  std::vector<Decl*> Decls;
+  GetAllTopLevelDecls("namespace N {} class C{}; int I;", Decls);
+  EXPECT_FALSE(Cpp::IsClass(Decls[0]));
+  EXPECT_TRUE(Cpp::IsClass(Decls[1]));
+  EXPECT_FALSE(Cpp::IsClass(Decls[2]));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsClassPolymorphic) {
+  std::vector<Decl*> Decls;
+  GetAllTopLevelDecls(R"(
+    namespace N {}
+
+    class C{};
+
+    class C2 {
+    public:
+      virtual ~C2() {}
+    };
+
+    int I;
+  )",
+                      Decls);
+
+  EXPECT_FALSE(Cpp::IsClassPolymorphic(Decls[0]));
+  EXPECT_FALSE(Cpp::IsClassPolymorphic(Decls[1]));
+  EXPECT_TRUE(Cpp::IsClassPolymorphic(Decls[2]));
+  EXPECT_FALSE(Cpp::IsClassPolymorphic(Decls[3]));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsComplete) {
+  std::vector<Decl*> Decls;
+  std::string code = R"(
+    namespace N {}
+    class C{};
+    int I;
+    struct S;
+    enum E : int;
+    union U{};
+    template<typename T> struct TemplatedS{ T x; };
+    TemplatedS<int> templateF() { return {}; };
+  )";
+  GetAllTopLevelDecls(code,
+                      Decls);
+  EXPECT_TRUE(Cpp::IsComplete(Decls[0]));
+  EXPECT_TRUE(Cpp::IsComplete(Decls[1]));
+  EXPECT_TRUE(Cpp::IsComplete(Decls[2]));
+  EXPECT_FALSE(Cpp::IsComplete(Decls[3]));
+  EXPECT_FALSE(Cpp::IsComplete(Decls[4]));
+  EXPECT_TRUE(Cpp::IsComplete(Decls[5]));
+  Cpp::TCppType_t retTy = Cpp::GetFunctionReturnType(Decls[7]);
+  EXPECT_TRUE(Cpp::IsComplete(Cpp::GetScopeFromType(retTy)));
+  EXPECT_FALSE(Cpp::IsComplete(nullptr));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_SizeOf) {
+  std::vector<Decl*> Decls;
+  std::string code = R"(namespace N {} class C{}; int I; struct S;
+                        enum E : int; union U{}; class Size4{int i;};
+                        struct Size16 {short a; double b;};
+                       )";
+  GetAllTopLevelDecls(code, Decls);
+  EXPECT_EQ(Cpp::SizeOf(Decls[0]), (size_t)0);
+  EXPECT_EQ(Cpp::SizeOf(Decls[1]), (size_t)1);
+  EXPECT_EQ(Cpp::SizeOf(Decls[2]), (size_t)0);
+  EXPECT_EQ(Cpp::SizeOf(Decls[3]), (size_t)0);
+  EXPECT_EQ(Cpp::SizeOf(Decls[4]), (size_t)0);
+  EXPECT_EQ(Cpp::SizeOf(Decls[5]), (size_t)1);
+  EXPECT_EQ(Cpp::SizeOf(Decls[6]), (size_t)4);
+  struct B {short a; double b;};
+  EXPECT_EQ(Cpp::SizeOf(Decls[7]), sizeof(B));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsBuiltin) {
+  // static std::set<std::string> g_builtins =
+  // {"bool", "char", "signed char", "unsigned char", "wchar_t", "short", "unsigned short",
+  //  "int", "unsigned int", "long", "unsigned long", "long long", "unsigned long long",
+  //  "float", "double", "long double", "void"}
+
+  std::vector<const char*> interpreter_args = { "-include", "new" };
+
+  TestFixture::CreateInterpreter(interpreter_args);
+  ASTContext &C = Interp->getCI()->getASTContext();
+  EXPECT_TRUE(Cpp::IsBuiltin(C.BoolTy.getAsOpaquePtr()));
+  EXPECT_TRUE(Cpp::IsBuiltin(C.CharTy.getAsOpaquePtr()));
+  EXPECT_TRUE(Cpp::IsBuiltin(C.SignedCharTy.getAsOpaquePtr()));
+  EXPECT_TRUE(Cpp::IsBuiltin(C.VoidTy.getAsOpaquePtr()));
+  // ...
+
+  // complex
+  EXPECT_TRUE(Cpp::IsBuiltin(C.getComplexType(C.FloatTy).getAsOpaquePtr()));
+  EXPECT_TRUE(Cpp::IsBuiltin(C.getComplexType(C.DoubleTy).getAsOpaquePtr()));
+  EXPECT_TRUE(Cpp::IsBuiltin(C.getComplexType(C.LongDoubleTy).getAsOpaquePtr()));
+  EXPECT_TRUE(Cpp::IsBuiltin(C.getComplexType(C.Float128Ty).getAsOpaquePtr()));
+
+// FIXME as part of llvm 22 PR. getTypeDeclType was deleted between llvm 21 and 22
+#if CLANG_VERSION_MAJOR < 22
+  // std::complex
+  Interp->declare("#include <complex>");
+  Sema &S = Interp->getCI()->getSema();
+  auto lookup = S.getStdNamespace()->lookup(&C.Idents.get("complex"));
+  auto *CTD = cast<ClassTemplateDecl>(lookup.front());
+  for (ClassTemplateSpecializationDecl *CTSD : CTD->specializations())
+    EXPECT_TRUE(Cpp::IsBuiltin(C.getTypeDeclType(CTSD).getAsOpaquePtr()));
+#endif
+
+  // User-defined records (even with "complex" in the name) are not builtins.
+  Interp->declare("class complex_number {}; class regular_record {};");
+  EXPECT_FALSE(
+      Cpp::IsBuiltin(Cpp::GetTypeFromScope(Cpp::GetNamed("complex_number", nullptr))));
+  EXPECT_FALSE(
+      Cpp::IsBuiltin(Cpp::GetTypeFromScope(Cpp::GetNamed("regular_record", nullptr))));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsTemplate) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(template<typename T>
+                        class A{};
+
+                        class C{
+                          template<typename T>
+                          int func(T t) {
+                            return 0;
+                          }
+                        };
+
+                        template<typename T>
+                        T f(T t) {
+                          return t;
+                        }
+
+                        void g() {} )";
+
+  GetAllTopLevelDecls(code, Decls);
+  EXPECT_TRUE(Cpp::IsTemplate(Decls[0]));
+  EXPECT_FALSE(Cpp::IsTemplate(Decls[1]));
+  EXPECT_TRUE(Cpp::IsTemplate(Decls[2]));
+  EXPECT_FALSE(Cpp::IsTemplate(Decls[3]));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsTemplateSpecialization) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    template<typename T>
+    class A{};
+
+    A<int> a;
+    )";
+
+  GetAllTopLevelDecls(code, Decls);
+  EXPECT_FALSE(Cpp::IsTemplateSpecialization(Decls[0]));
+  EXPECT_FALSE(Cpp::IsTemplateSpecialization(Decls[1]));
+  EXPECT_TRUE(Cpp::IsTemplateSpecialization(
+          Cpp::GetScopeFromType(Cpp::GetVariableType(Decls[1]))));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsTypedefed) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    typedef int I;
+    using D = double;
+    class C {};
+    )";
+
+  GetAllTopLevelDecls(code, Decls);
+  EXPECT_TRUE(Cpp::IsTypedefed(Decls[0]));
+  EXPECT_TRUE(Cpp::IsTypedefed(Decls[1]));
+  EXPECT_FALSE(Cpp::IsTypedefed(Decls[2]));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsAbstract) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    class A {};
+
+    class B {
+      virtual int f() = 0;
+    };
+
+    int sum(int a, int b) {
+      return a+b;
+    }
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+  EXPECT_FALSE(Cpp::IsAbstract(Decls[0]));
+  EXPECT_TRUE(Cpp::IsAbstract(Decls[1]));
+  EXPECT_FALSE(Cpp::IsAbstract(Decls[2]));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsVariable) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    int i;
+
+    class C {
+    public:
+      int a;
+      static int b;
+    };
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+  EXPECT_TRUE(Cpp::IsVariable(Decls[0]));
+  EXPECT_FALSE(Cpp::IsVariable(Decls[1]));
+
+  std::vector<Decl *> SubDecls;
+  GetAllSubDecls(Decls[1], SubDecls);
+  EXPECT_FALSE(Cpp::IsVariable(SubDecls[0]));
+  EXPECT_FALSE(Cpp::IsVariable(SubDecls[1]));
+  EXPECT_FALSE(Cpp::IsVariable(SubDecls[2]));
+  EXPECT_TRUE(Cpp::IsVariable(SubDecls[3]));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetName) {
+  std::vector<Decl*> Decls;
+  std::string code = R"(namespace N {} class C{}; int I; struct S;
+                        enum E : int; union U{}; class Size4{int i;};
+                        struct Size16 {short a; double b;};
+                       )";
+  GetAllTopLevelDecls(code, Decls);
+  EXPECT_EQ(Cpp::GetName(Decls[0]), "N");
+  EXPECT_EQ(Cpp::GetName(Decls[1]), "C");
+  EXPECT_EQ(Cpp::GetName(Decls[2]), "I");
+  EXPECT_EQ(Cpp::GetName(Decls[3]), "S");
+  EXPECT_EQ(Cpp::GetName(Decls[4]), "E");
+  EXPECT_EQ(Cpp::GetName(Decls[5]), "U");
+  EXPECT_EQ(Cpp::GetName(Decls[6]), "Size4");
+  EXPECT_EQ(Cpp::GetName(Decls[7]), "Size16");
+  EXPECT_EQ(Cpp::GetName(nullptr), "<unnamed>");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetCompleteName) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(namespace N {}
+                        class C{};
+                        int I;
+                        struct S;
+                        enum E : int;
+                        union U{};
+                        class Size4{int i;};
+                        struct Size16 {short a; double b;};
+
+                        template<typename T>
+                        class A {};
+                        A<int> a;
+
+                        enum { enum1 };
+
+                        template<typename T1, typename T2>
+                        void fn(T1 t1, T2 t2) {}
+                       )";
+  GetAllTopLevelDecls(code, Decls);
+
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[0]), "N");
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[1]), "C");
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[2]), "I");
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[3]), "S");
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[4]), "E");
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[5]), "U");
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[6]), "Size4");
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[7]), "Size16");
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[8]), "A");
+  EXPECT_EQ(Cpp::GetCompleteName(Cpp::GetScopeFromType(
+                                             Cpp::GetVariableType(
+                                                     Decls[9]))), "A<int>");
+#if CLANG_VERSION_MAJOR < 22
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[10]), "(unnamed)");
+#else
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[10]), "(unnamed enum)");
+#endif
+  EXPECT_EQ(Cpp::GetCompleteName(Decls[11]), "fn");
+  EXPECT_EQ(Cpp::GetCompleteName(nullptr), "<unnamed>");
+
+  ASTContext& C = Interp->getCI()->getASTContext();
+  std::vector<Cpp::TemplateArgInfo> template_args = {
+      C.IntTy.getAsOpaquePtr(), C.DoubleTy.getAsOpaquePtr()};
+  Cpp::TCppScope_t fn = Cpp::InstantiateTemplate(Decls[11], template_args);
+  EXPECT_TRUE(fn);
+  EXPECT_EQ(Cpp::GetCompleteName(fn), "fn<int, double>");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetQualifiedName) {
+  std::vector<Decl*> Decls;
+  std::string code = R"(namespace N {
+                        class C {
+                          int i;
+                          enum E { A, B };
+                        };
+                        }
+                       )";
+  GetAllTopLevelDecls(code, Decls);
+  GetAllSubDecls(Decls[0], Decls);
+  GetAllSubDecls(Decls[1], Decls);
+
+  EXPECT_EQ(Cpp::GetQualifiedName(0), "<unnamed>");
+  EXPECT_EQ(Cpp::GetQualifiedName(Decls[0]), "N");
+  EXPECT_EQ(Cpp::GetQualifiedName(Decls[1]), "N::C");
+  EXPECT_EQ(Cpp::GetQualifiedName(Decls[3]), "N::C::i");
+  EXPECT_EQ(Cpp::GetQualifiedName(Decls[4]), "N::C::E");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetQualifiedCompleteName) {
+  std::vector<Decl*> Decls;
+  std::string code = R"(namespace N {
+                        class C {
+                          int i;
+                          enum E { A, B };
+                        };
+                        template<typename T>
+                        class A {};
+                        A<int> a;
+                        }
+                       )";
+  GetAllTopLevelDecls(code, Decls);
+  GetAllSubDecls(Decls[0], Decls);
+  GetAllSubDecls(Decls[1], Decls);
+
+  EXPECT_EQ(Cpp::GetQualifiedCompleteName(0), "<unnamed>");
+  EXPECT_EQ(Cpp::GetQualifiedCompleteName(Decls[0]), "N");
+  EXPECT_EQ(Cpp::GetQualifiedCompleteName(Decls[1]), "N::C");
+  EXPECT_EQ(Cpp::GetQualifiedCompleteName(Decls[2]), "N::A");
+  EXPECT_EQ(Cpp::GetQualifiedCompleteName(Cpp::GetScopeFromType(Cpp::GetVariableType(Decls[3]))), "N::A<int>");
+  EXPECT_EQ(Cpp::GetQualifiedCompleteName(Decls[5]), "N::C::i");
+  EXPECT_EQ(Cpp::GetQualifiedCompleteName(Decls[6]), "N::C::E");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetUsingNamespaces) {
+  std::vector<Decl *> Decls, Decls1;
+  std::string code = R"(
+    namespace abc {
+
+    class C {};
+
+    }
+    using namespace std;
+    using namespace abc;
+
+    using I = int;
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+  std::vector<void *> usingNamespaces;
+  usingNamespaces = Cpp::GetUsingNamespaces(
+          Decls[0]->getASTContext().getTranslationUnitDecl());
+
+  //EXPECT_EQ(Cpp::GetName(usingNamespaces[0]), "runtime");
+  EXPECT_EQ(Cpp::GetName(usingNamespaces[usingNamespaces.size()-2]), "std");
+  EXPECT_EQ(Cpp::GetName(usingNamespaces[usingNamespaces.size()-1]), "abc");
+
+  std::string code1 = R"(
+    int x;
+  )";
+
+  GetAllTopLevelDecls(code1, Decls1);
+  std::vector<void*> usingNamespaces1;
+  usingNamespaces1 = Cpp::GetUsingNamespaces(Decls1[0]);
+  EXPECT_EQ(usingNamespaces1.size(), 0);
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetGlobalScope) {
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetGlobalScope()), "");
+  EXPECT_EQ(Cpp::GetName(Cpp::GetGlobalScope()), "");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetUnderlyingScope) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    namespace N {
+      class C {};
+    }
+
+    typedef N::C NC;
+    typedef int INT;
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetUnderlyingScope(Decls[0])), "N");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetUnderlyingScope(Decls[1])), "N::C");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetUnderlyingScope(Decls[2])), "INT");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetUnderlyingScope(nullptr)), "<unnamed>");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetScope) {
+  std::string code = R"(namespace N {
+                        class C {
+                          int i;
+                          enum E { A, B };
+                        };
+                        }
+
+                        typedef N::C T;
+                       )";
+
+  TestFixture::CreateInterpreter();
+  Interp->declare(code);
+  Cpp::TCppScope_t tu = Cpp::GetScope("", 0);
+  Cpp::TCppScope_t ns_N = Cpp::GetScope("N", 0);
+  Cpp::TCppScope_t cl_C = Cpp::GetScope("C", ns_N);
+  Cpp::TCppScope_t td_T = Cpp::GetScope("T", 0);
+  Cpp::TCppScope_t non_existent = Cpp::GetScope("sum", 0);
+
+  EXPECT_EQ(Cpp::GetQualifiedName(tu), "");
+  EXPECT_EQ(Cpp::GetQualifiedName(ns_N), "N");
+  EXPECT_EQ(Cpp::GetQualifiedName(cl_C), "N::C");
+  EXPECT_EQ(Cpp::GetQualifiedName(td_T), "T");
+  EXPECT_EQ(Cpp::GetQualifiedName(non_existent), "<unnamed>");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetScopefromCompleteName) {
+  std::string code = R"(namespace N1 {
+                        namespace N2 {
+                          class C {
+                            struct S {};
+                          };
+                        }
+                        }
+                       )";
+
+  TestFixture::CreateInterpreter();
+
+  Interp->declare(code);
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetScopeFromCompleteName("N1")), "N1");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetScopeFromCompleteName("N1::N2")), "N1::N2");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetScopeFromCompleteName("N1::N2::C")), "N1::N2::C");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetScopeFromCompleteName("N1::N2::C::S")), "N1::N2::C::S");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetNamed) {
+  std::string code = R"(namespace N1 {
+                        namespace N2 {
+                          class C {
+                            int i;
+                            enum E { A, B };
+                            struct S {};
+                          };
+                        }
+                        }
+                       )";
+
+  std::vector<const char*> interpreter_args = {"-include", "new"};
+
+  TestFixture::CreateInterpreter(interpreter_args);
+
+  Interp->declare(code);
+  Cpp::TCppScope_t ns_N1 = Cpp::GetNamed("N1", nullptr);
+  Cpp::TCppScope_t ns_N2 = Cpp::GetNamed("N2", ns_N1);
+  Cpp::TCppScope_t cl_C = Cpp::GetNamed("C", ns_N2);
+  Cpp::TCppScope_t en_E = Cpp::GetNamed("E", cl_C);
+  EXPECT_EQ(Cpp::GetQualifiedName(ns_N1), "N1");
+  EXPECT_EQ(Cpp::GetQualifiedName(ns_N2), "N1::N2");
+  EXPECT_EQ(Cpp::GetQualifiedName(cl_C), "N1::N2::C");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetNamed("i", cl_C)), "N1::N2::C::i");
+  EXPECT_EQ(Cpp::GetQualifiedName(en_E), "N1::N2::C::E");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetNamed("A", en_E)), "N1::N2::C::A");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetNamed("B", en_E)), "N1::N2::C::B");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetNamed("A", cl_C)), "N1::N2::C::A");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetNamed("B", cl_C)), "N1::N2::C::B");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetNamed("S", cl_C)), "N1::N2::C::S");
+
+  Interp->process("#include <string>");
+  Cpp::TCppScope_t std_ns = Cpp::GetNamed("std", nullptr);
+  Cpp::TCppScope_t std_string_class = Cpp::GetNamed("string", std_ns);
+  Cpp::TCppScope_t std_string_npos_var = Cpp::GetNamed("npos", std_string_class);
+  EXPECT_EQ(Cpp::GetQualifiedName(std_ns), "std");
+  EXPECT_EQ(Cpp::GetQualifiedName(std_string_class), "std::string");
+  EXPECT_EQ(Cpp::GetQualifiedName(std_string_npos_var), "std::basic_string<char>::npos");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetNamedWithUsing) {
+  // Each subcase covers one form of [namespace.udecl] / [namespace.udir].
+  // GetNamed must look through the alias and return the original decl,
+  // identified by canonical-decl identity.
+  std::string code = R"(
+    namespace N {
+      class C {};
+      int x;
+      void f();
+    }
+    namespace M {
+      using N::C;          // using-declaration: type
+      using N::x;          // using-declaration: variable
+      using N::f;          // using-declaration: function
+    }
+    namespace P {
+      using namespace N;   // using-directive
+    }
+  )";
+
+  TestFixture::CreateInterpreter();
+  Interp->declare(code);
+
+  Cpp::TCppScope_t ns_N = Cpp::GetNamed("N");
+  Cpp::TCppScope_t ns_M = Cpp::GetNamed("M");
+  Cpp::TCppScope_t ns_P = Cpp::GetNamed("P");
+  ASSERT_TRUE(ns_N);
+  ASSERT_TRUE(ns_M);
+  ASSERT_TRUE(ns_P);
+
+  Cpp::TCppScope_t N_C = Cpp::GetNamed("C", ns_N);
+  Cpp::TCppScope_t N_x = Cpp::GetNamed("x", ns_N);
+  Cpp::TCppScope_t N_f = Cpp::GetNamed("f", ns_N);
+  ASSERT_TRUE(N_C);
+  ASSERT_TRUE(N_x);
+  ASSERT_TRUE(N_f);
+
+  // using-declaration: GetNamed inside M should resolve through the
+  // UsingShadowDecl to the original target in N.
+  EXPECT_EQ(Cpp::GetNamed("C", ns_M), N_C)
+      << "using N::C; GetNamed(\"C\", M) should return N::C";
+  EXPECT_EQ(Cpp::GetNamed("x", ns_M), N_x)
+      << "using N::x; GetNamed(\"x\", M) should return N::x";
+  EXPECT_EQ(Cpp::GetNamed("f", ns_M), N_f)
+      << "using N::f; GetNamed(\"f\", M) should return N::f";
+
+  // using-directive: names in N are visible inside P; GetNamed should
+  // surface them as the canonical decls in N.
+  EXPECT_EQ(Cpp::GetNamed("C", ns_P), N_C)
+      << "using namespace N; GetNamed(\"C\", P) should return N::C";
+  EXPECT_EQ(Cpp::GetNamed("x", ns_P), N_x)
+      << "using namespace N; GetNamed(\"x\", P) should return N::x";
+  EXPECT_EQ(Cpp::GetNamed("f", ns_P), N_f)
+      << "using namespace N; GetNamed(\"f\", P) should return N::f";
+
+  // Transitive using-directive ([namespace.udir]p3): names visible via
+  // the closure of using-directives, not just the first hop. Exercises
+  // UnqualUsingDirectiveSet::addUsingDirectives' transitive walk.
+  Interp->declare(R"(
+    namespace P2 { using namespace N; }
+    namespace Q  { using namespace P2; }
+  )");
+  Cpp::TCppScope_t ns_Q = Cpp::GetNamed("Q");
+  ASSERT_TRUE(ns_Q);
+  EXPECT_EQ(Cpp::GetNamed("C", ns_Q), N_C)
+      << "using namespace P2 (which uses N); GetNamed(\"C\", Q) "
+         "should chase Q -> P2 -> N::C";
+
+  // Ambiguous using-directives: two namespaces define the same name,
+  // both made visible by sibling using-directives. GetNamed must
+  // collapse the ambiguity to nullptr (LookupResult2Decl returns -1
+  // for non-single results, GetNamed turns that into nullptr).
+  Interp->declare(R"(
+    namespace N3 { class C {}; }
+    namespace AmbU { using namespace N; using namespace N3; }
+  )");
+  Cpp::TCppScope_t ns_Amb = Cpp::GetNamed("AmbU");
+  ASSERT_TRUE(ns_Amb);
+  EXPECT_EQ(Cpp::GetNamed("C", ns_Amb), nullptr)
+      << "ambiguous using-directives must return nullptr, not silently "
+         "pick one";
+
+  // Anonymous-namespace member visible at TU scope: Within=nullptr
+  // takes the TUScope short-circuit, which already runs unqualified
+  // lookup. Pin that the short-circuit still finds the name (the
+  // synthetic-scope path never runs here).
+  Interp->declare("namespace { int hidden_y = 42; }");
+  EXPECT_TRUE(Cpp::GetNamed("hidden_y"))
+      << "anonymous-namespace member should be visible at TU scope";
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetParentScope) {
+  std::string code = R"(namespace N1 {
+                        namespace N2 {
+                          class C {
+                            int i;
+                            enum E { A, B };
+                            struct S {};
+                          };
+                        }
+                        }
+                       )";
+
+  TestFixture::CreateInterpreter();
+
+  Interp->declare(code);
+  Cpp::TCppScope_t ns_N1 = Cpp::GetNamed("N1");
+  Cpp::TCppScope_t ns_N2 = Cpp::GetNamed("N2", ns_N1);
+  Cpp::TCppScope_t cl_C = Cpp::GetNamed("C", ns_N2);
+  Cpp::TCppScope_t int_i = Cpp::GetNamed("i", cl_C);
+  Cpp::TCppScope_t en_E = Cpp::GetNamed("E", cl_C);
+  Cpp::TCppScope_t en_A = Cpp::GetNamed("A", cl_C);
+  Cpp::TCppScope_t en_B = Cpp::GetNamed("B", cl_C);
+
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetParentScope(ns_N1)), "");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetParentScope(ns_N2)), "N1");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetParentScope(cl_C)), "N1::N2");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetParentScope(int_i)), "N1::N2::C");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetParentScope(en_E)), "N1::N2::C");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetParentScope(en_A)), "N1::N2::C::E");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetParentScope(en_B)), "N1::N2::C::E");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetScopeFromType) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    namespace N {
+    class C {};
+    struct S {};
+    typedef C T;
+    enum E {};
+    }
+
+    N::C c;
+
+    N::S s;
+
+    int i;
+
+    N::T t;
+
+    N::E e;
+
+    N::C myFunc();
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+  QualType QT1 = llvm::dyn_cast<VarDecl>(Decls[1])->getType();
+  QualType QT2 = llvm::dyn_cast<VarDecl>(Decls[2])->getType();
+  QualType QT3 = llvm::dyn_cast<VarDecl>(Decls[3])->getType();
+  QualType QT4 = llvm::dyn_cast<VarDecl>(Decls[4])->getType();
+  QualType QT5 = llvm::dyn_cast<VarDecl>(Decls[5])->getType();
+  QualType QT6 = llvm::dyn_cast<FunctionDecl>(Decls[6])->getReturnType();
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetScopeFromType(QT1.getAsOpaquePtr())),
+          "N::C");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetScopeFromType(QT2.getAsOpaquePtr())),
+          "N::S");
+  EXPECT_EQ(Cpp::GetScopeFromType(QT3.getAsOpaquePtr()),
+          (Cpp::TCppScope_t) 0);
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetScopeFromType(QT4.getAsOpaquePtr())),
+          "N::C");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetScopeFromType(QT5.getAsOpaquePtr())),
+            "N::E");
+  EXPECT_EQ(Cpp::GetQualifiedName(Cpp::GetScopeFromType(QT6.getAsOpaquePtr())),
+            "N::C");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetNumBases) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    class A {};
+    class B : virtual public A {};
+    class C : virtual public A {};
+    class D : public B, public C {};
+    class E : public D {};
+    class NoDef;
+
+    template<typename T, int N>
+    struct Klass : public A {
+        T t{N};
+    };
+
+    typedef Klass<int, 1> TKlass;
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+
+  EXPECT_EQ(Cpp::GetNumBases(Decls[0]), 0);
+  EXPECT_EQ(Cpp::GetNumBases(Decls[1]), 1);
+  EXPECT_EQ(Cpp::GetNumBases(Decls[2]), 1);
+  EXPECT_EQ(Cpp::GetNumBases(Decls[3]), 2);
+  EXPECT_EQ(Cpp::GetNumBases(Decls[4]), 1);
+  // FIXME: Perhaps we should have a special number or error out as this
+  // operation is not well defined if a class has no definition.
+  EXPECT_EQ(Cpp::GetNumBases(Decls[5]), 0);
+  EXPECT_EQ(Cpp::GetNumBases(Cpp::GetUnderlyingScope(Decls[7])), 1);
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetBaseClass) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    class A {};
+    class B : virtual public A {};
+    class C : virtual public A {};
+    class D : public B, public C {};
+    class E : public D {};
+
+    template <typename T>
+    class TC1 {};
+
+    template <typename T>
+    class TC2 : TC1 <T> {};
+
+    template <typename T>
+    class TC3 :public A {};
+
+    TC2<A> var;
+    TC3<A> var1;
+    int a;
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+
+  auto get_base_class_name = [](Decl *D, int i) {
+      return Cpp::GetQualifiedName(Cpp::GetBaseClass(D, i));
+  };
+
+  EXPECT_EQ(get_base_class_name(Decls[1], 0), "A");
+  EXPECT_EQ(get_base_class_name(Decls[2], 0), "A");
+  EXPECT_EQ(get_base_class_name(Decls[3], 0), "B");
+  EXPECT_EQ(get_base_class_name(Decls[3], 1), "C");
+  EXPECT_EQ(get_base_class_name(Decls[4], 0), "D");
+  EXPECT_EQ(get_base_class_name(Decls[10], 0), "<unnamed>");
+
+  auto* VD = Cpp::GetNamed("var");
+  auto *VT = Cpp::GetVariableType(VD);
+  auto *TC2_A_Decl = Cpp::GetScopeFromType(VT);
+  auto *TC1_A_Decl = Cpp::GetBaseClass(TC2_A_Decl, 0);
+  EXPECT_EQ(Cpp::GetCompleteName(TC1_A_Decl), "TC1<A>");
+
+  auto* VD1 = Cpp::GetNamed("var1");
+  auto* VT1 = Cpp::GetVariableType(VD1);
+  auto* TC3_A_Decl = Cpp::GetScopeFromType(VT1);
+  auto* A_class = Cpp::GetBaseClass(TC3_A_Decl, 0);
+  EXPECT_EQ(Cpp::GetCompleteName(A_class), "A");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IsSubclass) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    class A {};
+    class B : virtual public A {};
+    class C : virtual public A {};
+    class D : public B, public C {};
+    class E : public D {};
+    void check();
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[0], Decls[0]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[1], Decls[0]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[2], Decls[0]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[3], Decls[0]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[4], Decls[0]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[0], Decls[1]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[1], Decls[1]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[2], Decls[1]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[3], Decls[1]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[4], Decls[1]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[0], Decls[2]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[1], Decls[2]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[2], Decls[2]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[3], Decls[2]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[4], Decls[2]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[0], Decls[3]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[1], Decls[3]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[2], Decls[3]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[3], Decls[3]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[4], Decls[3]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[0], Decls[4]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[1], Decls[4]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[2], Decls[4]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[3], Decls[4]));
+  EXPECT_TRUE(Cpp::IsSubclass(Decls[4], Decls[4]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[4], Decls[5]));
+  EXPECT_FALSE(Cpp::IsSubclass(Decls[4], nullptr));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetBaseClassOffset) {
+  std::vector<Decl *> Decls;
+#define Stringify(s) Stringifyx(s)
+#define Stringifyx(...) #__VA_ARGS__
+#define CODE                                                    \
+  struct A { int m_a; };                                         \
+  struct B { int m_b; };                                         \
+  struct C : virtual A, virtual B { int m_c; };                  \
+  struct D : virtual A, virtual B, public C { int m_d; };        \
+  struct E : public A, public B { int m_e; };                    \
+  struct F : public A { int m_f; };                              \
+  struct G : public F { int m_g; };
+
+CODE;
+
+  GetAllTopLevelDecls(Stringify(CODE), Decls);
+#undef Stringifyx
+#undef Stringify
+#undef CODE
+
+  std::unique_ptr<C> c(new C());
+  EXPECT_EQ(Cpp::GetBaseClassOffset(Decls[2], Decls[0]),
+            (char*)(A*)c.get() - (char*)c.get());
+  EXPECT_EQ(Cpp::GetBaseClassOffset(Decls[2], Decls[1]),
+            (char*)(B*)c.get() - (char*)c.get());
+
+  std::unique_ptr<D> d(new D());
+  EXPECT_EQ(Cpp::GetBaseClassOffset(Decls[3], Decls[0]),
+            (char*)(A*)d.get() - (char*)d.get());
+  EXPECT_EQ(Cpp::GetBaseClassOffset(Decls[3], Decls[1]),
+            (char*)(B*)d.get() - (char*)d.get());
+  EXPECT_EQ(Cpp::GetBaseClassOffset(Decls[3], Decls[2]),
+            (char*)(C*)d.get() - (char*)d.get());
+
+  std::unique_ptr<E> e(new E());
+  EXPECT_EQ(Cpp::GetBaseClassOffset(Decls[4], Decls[0]),
+            (char*)(A*)e.get() - (char*)e.get());
+  EXPECT_EQ(Cpp::GetBaseClassOffset(Decls[4], Decls[1]),
+            (char*)(B*)e.get() - (char*)e.get());
+
+  std::unique_ptr<G> g(new G());
+  EXPECT_EQ(Cpp::GetBaseClassOffset(Decls[6], Decls[0]),
+            (char*)(A*)g.get() - (char*)g.get());
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetAllCppNames) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    class A { int a; };
+    class B { int b; };
+    class C : public A, public B { int c; };
+    class D : public A, public B, public C { int d; };
+    namespace N {
+      class A { int a; };
+      class B { int b; };
+      class C : public A, public B { int c; };
+      class D : public A, public B, public C { int d; };
+    }
+    void myfunc() {
+      int a;
+    }
+  )";
+
+  std::vector<const char*> interpreter_args = {"-Wno-inaccessible-base"};
+
+  GetAllTopLevelDecls(code, Decls, /*filter_implicitGenerated=*/false,
+                      interpreter_args);
+
+  auto test_get_all_cpp_names =
+      [](Decl* D, const std::vector<std::string>& truth_names) {
+        std::set<std::string> names;
+        Cpp::GetAllCppNames(D, names);
+        EXPECT_EQ(names.size(), truth_names.size());
+
+        for (unsigned i = 0; i < truth_names.size() && i < names.size(); i++) {
+          EXPECT_TRUE(names.find(truth_names[i]) != names.end());
+        }
+      };
+
+  test_get_all_cpp_names(Decls[0], {"a"});
+  test_get_all_cpp_names(Decls[1], {"b"});
+  test_get_all_cpp_names(Decls[2], {"c"});
+  test_get_all_cpp_names(Decls[3], {"d"});
+  test_get_all_cpp_names(Decls[4], {"A", "B", "C", "D"});
+  test_get_all_cpp_names(Decls[5], {});
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_InstantiateNNTPClassTemplate) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    template <int N>
+    struct Factorial {
+      enum { value = N * Factorial<N - 1>::value };
+    };
+
+    template <>
+    struct Factorial<0> {
+      enum { value = 1 };
+    };)";
+
+  GetAllTopLevelDecls(code, Decls);
+
+  ASTContext &C = Interp->getCI()->getASTContext();
+  Cpp::TCppType_t IntTy = C.IntTy.getAsOpaquePtr();
+  std::vector<Cpp::TemplateArgInfo> args1 = {{IntTy, "5"}};
+  EXPECT_TRUE(Cpp::InstantiateTemplate(Decls[0], args1));
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_InstantiateVarTemplate) {
+  std::vector<Decl*> Decls;
+  std::string code = R"(
+template<class T> constexpr T pi = T(3.1415926535897932385L);
+)";
+
+  GetAllTopLevelDecls(code, Decls);
+  ASTContext& C = Interp->getCI()->getASTContext();
+
+  std::vector<Cpp::TemplateArgInfo> args1 = {C.IntTy.getAsOpaquePtr()};
+  auto* Instance1 = Cpp::InstantiateTemplate(Decls[0], args1);
+  EXPECT_TRUE(isa<VarDecl>(static_cast<Decl*>(Instance1)));
+  auto* VD = cast<VarTemplateSpecializationDecl>(static_cast<Decl*>(Instance1));
+  VarTemplateDecl* VDTD1 = VD->getSpecializedTemplate();
+  EXPECT_TRUE(VDTD1->isThisDeclarationADefinition());
+  TemplateArgument TA1 = (*VD->getTemplateArgsAsWritten())[0].getArgument();
+  EXPECT_TRUE(TA1.getAsType()->isIntegerType());
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_InstantiateFunctionTemplate) {
+  std::vector<Decl*> Decls;
+  std::string code = R"(
+template<typename T> T TrivialFnTemplate() { return T(); }
+)";
+
+  GetAllTopLevelDecls(code, Decls);
+  ASTContext& C = Interp->getCI()->getASTContext();
+
+  std::vector<Cpp::TemplateArgInfo> args1 = {C.IntTy.getAsOpaquePtr()};
+  auto* Instance1 = Cpp::InstantiateTemplate(Decls[0], args1);
+  EXPECT_TRUE(isa<FunctionDecl>(static_cast<Decl*>(Instance1)));
+  FunctionDecl* FD = cast<FunctionDecl>(static_cast<Decl*>(Instance1));
+  FunctionDecl* FnTD1 = FD->getTemplateInstantiationPattern();
+  EXPECT_TRUE(FnTD1->isThisDeclarationADefinition());
+  TemplateArgument TA1 = FD->getTemplateSpecializationArgs()->get(0);
+  EXPECT_TRUE(TA1.getAsType()->isIntegerType());
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE,
+           ScopeReflection_InstantiateTemplateFunctionFromString) {
+  std::vector<const char*> interpreter_args = {"-include", "new"};
+  TestFixture::CreateInterpreter(interpreter_args);
+  std::string code = R"(#include <memory>)";
+  Interp->process(code);
+  const char* str = "std::make_unique<int,int>";
+  auto* Instance1 =
+      static_cast<Decl*>(Cpp::InstantiateTemplateFunctionFromString(str));
+  EXPECT_TRUE(Instance1);
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_InstantiateTemplate) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    template<typename T>
+    class AllDefault {
+    public:
+      AllDefault(int val) : m_t(val) {}
+      template<int aap=1, int noot=2>
+      int do_stuff() { return m_t+aap+noot; }
+
+    public:
+      T m_t;
+    };
+
+    template<typename T = int>
+    class C0 {
+    public:
+      C0(T val) : m_t(val) {}
+      template<int aap=1, int noot=2>
+      T do_stuff() { return m_t+aap+noot; }
+
+    public:
+      T m_t;
+    };
+
+    template<typename T, typename R = C0<T>>
+    class C1 {
+    public:
+      C1(const R & val = R()) : m_t(val.m_t) {}
+      template<int aap=1, int noot=2>
+      T do_stuff() { return m_t+aap+noot; }
+
+    public:
+      T m_t;
+    };
+
+    template<typename T, unsigned N>
+    class C2{};
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+  ASTContext &C = Interp->getCI()->getASTContext();
+
+  std::vector<Cpp::TemplateArgInfo> args1 = {C.IntTy.getAsOpaquePtr()};
+  auto* Instance1 = Cpp::InstantiateTemplate(Decls[0], args1);
+  EXPECT_TRUE(
+      isa<ClassTemplateSpecializationDecl>(static_cast<Decl*>(Instance1)));
+  auto *CTSD1 = static_cast<ClassTemplateSpecializationDecl*>(Instance1);
+  EXPECT_TRUE(CTSD1->hasDefinition());
+  TemplateArgument TA1 = CTSD1->getTemplateArgs().get(0);
+  EXPECT_TRUE(TA1.getAsType()->isIntegerType());
+  EXPECT_TRUE(CTSD1->hasDefinition());
+
+  auto Instance2 = Cpp::InstantiateTemplate(Decls[1], {});
+  EXPECT_TRUE(
+      isa<ClassTemplateSpecializationDecl>(static_cast<Decl*>(Instance2)));
+  auto *CTSD2 = static_cast<ClassTemplateSpecializationDecl*>(Instance2);
+  EXPECT_TRUE(CTSD2->hasDefinition());
+  TemplateArgument TA2 = CTSD2->getTemplateArgs().get(0);
+  EXPECT_TRUE(TA2.getAsType()->isIntegerType());
+
+  std::vector<Cpp::TemplateArgInfo> args3 = {C.IntTy.getAsOpaquePtr()};
+  auto* Instance3 = Cpp::InstantiateTemplate(Decls[2], args3);
+  EXPECT_TRUE(
+      isa<ClassTemplateSpecializationDecl>(static_cast<Decl*>(Instance3)));
+  auto *CTSD3 = static_cast<ClassTemplateSpecializationDecl*>(Instance3);
+  EXPECT_TRUE(CTSD3->hasDefinition());
+  TemplateArgument TA3_0 = CTSD3->getTemplateArgs().get(0);
+  TemplateArgument TA3_1 = CTSD3->getTemplateArgs().get(1);
+  EXPECT_TRUE(TA3_0.getAsType()->isIntegerType());
+  EXPECT_TRUE(Cpp::IsRecordType(TA3_1.getAsType().getAsOpaquePtr()));
+
+  std::vector<Cpp::TCppFunction_t> Inst3_methods;
+  Cpp::GetClassMethods(Instance3, Inst3_methods);
+  EXPECT_EQ(Cpp::GetFunctionSignature(Inst3_methods[0]),
+            "C1<int>::C1(const C0<int> &val)");
+
+  std::vector<Cpp::TemplateArgInfo> args4 = {C.IntTy.getAsOpaquePtr(),
+                                               {C.IntTy.getAsOpaquePtr(), "3"}};
+  auto* Instance4 = Cpp::InstantiateTemplate(Decls[3], args4);
+
+  EXPECT_TRUE(
+      isa<ClassTemplateSpecializationDecl>(static_cast<Decl*>(Instance4)));
+  auto *CTSD4 = static_cast<ClassTemplateSpecializationDecl*>(Instance4);
+  EXPECT_TRUE(CTSD4->hasDefinition());
+  TemplateArgument TA4_0 = CTSD4->getTemplateArgs().get(0);
+  TemplateArgument TA4_1 = CTSD4->getTemplateArgs().get(1);
+  EXPECT_TRUE(TA4_0.getAsType()->isIntegerType());
+  EXPECT_TRUE(TA4_1.getAsIntegral() == 3);
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetClassTemplateArgs) {
+  std::vector<Decl*> Decls;
+  std::string code = R"(
+        template<typename _Signature>
+        class function;
+
+        template<typename _Res, typename... _ArgTypes>
+        class function<_Res(_ArgTypes...)> {};
+
+        function<int(int)> f;
+    )";
+
+  GetAllTopLevelDecls(code, Decls);
+
+  Cpp::TCppScope_t f =
+      Cpp::GetScopeFromType(Cpp::GetVariableType(Decls.back()));
+  EXPECT_TRUE(f);
+
+  std::vector<Cpp::TemplateArgInfo> tmpl_args;
+  Cpp::GetClassTemplateArgs(f, tmpl_args);
+  EXPECT_EQ(tmpl_args.size(), 1);
+
+  EXPECT_EQ(Cpp::GetTypeAsString(tmpl_args[0].m_Type), "int (int)");
+
+  tmpl_args.clear();
+  Cpp::GetClassTemplateInstantiationArgs(f, tmpl_args);
+  EXPECT_EQ(tmpl_args.size(), 2);
+
+  EXPECT_EQ(Cpp::GetTypeAsString(tmpl_args[0].m_Type), "int");
+  EXPECT_EQ(Cpp::GetTypeAsString(tmpl_args[1].m_Type), "int");
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE,
+           ScopeReflection_GetClassTemplateInstantiationArgs) {
+  std::vector<Decl *> Decls;
+  std::string code = R"(
+    template<typename ...T> struct __Cppyy_AppendTypesSlow {};
+    __Cppyy_AppendTypesSlow<int, float, double> v1;
+    __Cppyy_AppendTypesSlow<int> v2;
+    __Cppyy_AppendTypesSlow<> v3;
+  )";
+
+  GetAllTopLevelDecls(code, Decls);
+
+  auto* v1 = Cpp::GetNamed("v1");
+  auto* v2 = Cpp::GetNamed("v2");
+  auto* v3 = Cpp::GetNamed("v3");
+  EXPECT_TRUE(v1 && v2 && v3);
+
+  auto *v1_class = Cpp::GetScopeFromType(Cpp::GetVariableType(v1));
+  auto *v2_class = Cpp::GetScopeFromType(Cpp::GetVariableType(v2));
+  auto *v3_class = Cpp::GetScopeFromType(Cpp::GetVariableType(v3));
+  EXPECT_TRUE(v1_class && v2_class && v3_class);
+
+  std::vector<Cpp::TemplateArgInfo> instance_types;
+
+  Cpp::GetClassTemplateInstantiationArgs(v1_class, instance_types);
+  EXPECT_TRUE(instance_types.size() == 3);
+
+  instance_types.clear();
+
+  Cpp::GetClassTemplateInstantiationArgs(v2_class, instance_types);
+  EXPECT_TRUE(instance_types.size() == 1);
+
+  instance_types.clear();
+
+  Cpp::GetClassTemplateInstantiationArgs(v3_class, instance_types);
+  EXPECT_TRUE(instance_types.size() == 0);
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_IncludeVector) {
+  std::string code = R"(
+    #include <vector>
+    #include <iostream>
+  )";
+  std::vector<const char*> interpreter_args = {"-include", "new"};
+  TestFixture::CreateInterpreter(interpreter_args);
+  Interp->declare(code);
+}
+
+TYPED_TEST(CPPINTEROP_TEST_MODE, ScopeReflection_GetOperator) {
+
+  TestFixture::CreateInterpreter();
+
+  std::string code = R"(
+    class MyClass {
+    public:
+        int x;
+        MyClass(int x) : x(x) {}
+    };
+
+    MyClass operator-(MyClass lhs, MyClass rhs) {
+        return MyClass(lhs.x - rhs.x);
+    }
+
+    MyClass operator+(MyClass lhs, MyClass rhs) {
+        return MyClass(lhs.x + rhs.x);
+    }
+
+    namespace extra_ops {
+
+    MyClass operator+(MyClass lhs, int rhs) {
+        return MyClass(lhs.x + rhs);
+    }
+
+    MyClass operator+(int lhs, MyClass rhs) {
+        return MyClass(lhs + rhs.x);
+    }
+
+    MyClass operator~(MyClass self) {
+        return MyClass(-self.x);
+    }
+
+    }
+  )";
+
+  Cpp::Declare(code.c_str());
+
+  std::vector<Cpp::TCppFunction_t> ops;
+
+  Cpp::GetOperator(Cpp::GetGlobalScope(), Cpp::Operator::OP_Plus, ops);
+  EXPECT_EQ(ops.size(), 1);
+  ops.clear();
+
+  Cpp::GetOperator(Cpp::GetGlobalScope(), Cpp::Operator::OP_Minus, ops);
+  EXPECT_EQ(ops.size(), 1);
+  ops.clear();
+
+  Cpp::GetOperator(Cpp::GetGlobalScope(), Cpp::Operator::OP_Star, ops);
+  EXPECT_EQ(ops.size(), 0);
+  ops.clear();
+
+  // operators defined within a namespace
+  Cpp::GetOperator(Cpp::GetScope("extra_ops"), Cpp::Operator::OP_Plus, ops);
+  EXPECT_EQ(ops.size(), 2);
+  ops.clear();
+
+  // unary operator
+  Cpp::GetOperator(Cpp::GetScope("extra_ops"), Cpp::Operator::OP_Tilde, ops);
+  EXPECT_EQ(ops.size(), 1);
+  ops.clear();
+
+  Cpp::GetOperator(Cpp::GetScope("extra_ops"), Cpp::Operator::OP_Tilde, ops,
+                   Cpp::OperatorArity::kUnary);
+  EXPECT_EQ(ops.size(), 1);
+  ops.clear();
+
+  Cpp::GetOperator(Cpp::GetScope("extra_ops"), Cpp::Operator::OP_Tilde, ops,
+                   Cpp::OperatorArity::kBinary);
+  EXPECT_EQ(ops.size(), 0);
+
+  std::string inheritance_code = R"(
+  struct Parent {
+    int x;
+    Parent(int x) : x(x) {}
+    Parent operator+(const Parent& other) {
+      return Parent(x + other.x);
+    }
+  };
+
+  struct Child : Parent {
+    Child(int x) : Parent(x) {}
+    Child operator-(const Child& other) {
+      return Child(x - other.x);
+    }
+  };
+  )";
+  Cpp::Declare(inheritance_code.c_str());
+
+  ops.clear();
+  Cpp::GetOperator(Cpp::GetScope("Child"), Cpp::Operator::OP_Plus, ops);
+  EXPECT_EQ(ops.size(), 1);
+
+  ops.clear();
+  Cpp::GetOperator(Cpp::GetScope("Child"), Cpp::Operator::OP_Minus, ops);
+  EXPECT_EQ(ops.size(), 1);
+}

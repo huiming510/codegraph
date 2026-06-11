@@ -1,0 +1,5 @@
+Originally, the package libAfterImage was imported from its official repository using the command:
+
+   cvs -d :pserver:anonymous@cvs.aftercode.net:/home/cvsroot checkout afterstep-stable/libAfterImage
+
+Most files were modified and the build system adapted, compared to the official (obsolete) libAfterImage version.

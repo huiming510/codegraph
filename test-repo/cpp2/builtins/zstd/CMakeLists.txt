@@ -1,0 +1,71 @@
+# Copyright (C) 1995-2026, Rene Brun and Fons Rademakers.
+# All rights reserved.
+#
+# For the licensing terms see $ROOTSYS/LICENSE.
+# For the list of contributors see $ROOTSYS/README/CREDITS.
+
+# **PLEASE UPDATE ALSO THE FOLLOWING LINE WHEN UPDATING THE VERSION**
+# 19 Feb 2025,  https://github.com/facebook/zstd/releases/tag/v1.5.7
+set(ROOT_ZSTD_VERSION 1.5.7)
+set(ROOT_ZSTD_HASH "37d7284556b20954e56e1ca85b80226768902e2edabd3b649e9e72c0c9012ee3")
+set(ZSTD_VERSION ${ROOT_ZSTD_VERSION} CACHE INTERNAL "" FORCE) # used in roottest
+
+set(ROOT_ZSTD_PREFIX ${CMAKE_BINARY_DIR}/builtins/ZSTD-prefix)
+
+if(MSVC)
+     set(ROOT_ZSTD_LIBRARY ${ROOT_ZSTD_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zstd_static${CMAKE_STATIC_LIBRARY_SUFFIX})
+else()
+     set(ROOT_ZSTD_LIBRARY ${ROOT_ZSTD_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zstd${CMAKE_STATIC_LIBRARY_SUFFIX})
+endif()
+
+if(MSVC)
+    # In the MSVC case, we forward the default C++ configuration flags because
+    # they are changed by ROOT in SetUpWindows.cmake.
+    set(zstd_extra_cmake_args
+        -DCMAKE_CXXFLAGS_RELWITHDEBINFO=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}
+        -DCMAKE_CXXFLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}
+        -DCMAKE_CXXFLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG})
+    if(NOT CMAKE_GENERATOR MATCHES Ninja)
+        if(winrtdebug)
+            set(ROOT_ZSTD_BUILD_COMMAND_FLAGS "--config Debug")
+        else()
+            set(ROOT_ZSTD_BUILD_COMMAND_FLAGS "--config $<IF:$<CONFIG:Debug,RelWithDebInfo>,RelWithDebInfo,Release>")
+        endif()
+    endif()
+endif()
+
+ExternalProject_Add(
+    BUILTIN_ZSTD
+    URL ${lcgpackages}/zstd-${ROOT_ZSTD_VERSION}.tar.gz
+    URL_HASH SHA256=${ROOT_ZSTD_HASH}
+    PREFIX ${ROOT_ZSTD_PREFIX}
+    SOURCE_SUBDIR "build/cmake"
+    CMAKE_ARGS -G ${CMAKE_GENERATOR}
+    -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+    -DCMAKE_INSTALL_LIBDIR=<INSTALL_DIR>/lib
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    -DCMAKE_CXX_VISIBILITY_PRESET=hidden
+    -DCMAKE_C_VISIBILITY_PRESET=hidden
+    -DZSTD_BUILD_SHARED=OFF
+    BUILD_COMMAND ${CMAKE_COMMAND} --build "<SOURCE_DIR>/<SOURCE_SUBDIR>" ${ROOT_ZSTD_BUILD_COMMAND_FLAGS}
+    INSTALL_COMMAND ${CMAKE_COMMAND} --install "<SOURCE_DIR>/<SOURCE_SUBDIR>" ${ROOT_ZSTD_BUILD_COMMAND_FLAGS}
+    LOG_DOWNLOAD 1 LOG_CONFIGURE 1 LOG_BUILD 1 LOG_INSTALL 1 LOG_OUTPUT_ON_FAILURE 1
+    BUILD_IN_SOURCE 1
+    BUILD_BYPRODUCTS ${ROOT_ZSTD_LIBRARY}
+    TIMEOUT 600
+)
+
+set(ZSTD_INCLUDE_DIR ${ROOT_ZSTD_PREFIX}/include)
+file(MAKE_DIRECTORY ${ZSTD_INCLUDE_DIR})
+add_library(ZSTD::ZSTD IMPORTED STATIC GLOBAL)
+set_target_properties(ZSTD::ZSTD PROPERTIES
+    IMPORTED_LOCATION ${ROOT_ZSTD_LIBRARY}
+    INTERFACE_INCLUDE_DIRECTORIES ${ZSTD_INCLUDE_DIR}
+)
+
+# Set the canonical output of find_package according to
+# https://cmake.org/cmake/help/latest/manual/cmake-developer.7.html#standard-variable-names
+set(ZSTD_INCLUDE_DIRS ${ZSTD_INCLUDE_DIR} PARENT_SCOPE)
+set(ZSTD_LIBRARIES ${ROOT_ZSTD_LIBRARY} PARENT_SCOPE)
+set(ZSTD_FOUND TRUE PARENT_SCOPE)
+set(ZSTD_VERSION ${ROOT_ZSTD_VERSION} PARENT_SCOPE)
